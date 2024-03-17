@@ -136,20 +136,20 @@ continuas <- c('P5000', 'P5010', 'P5100', 'P5130', 'P5140', 'Nper', 'Npersug', '
 
 EH <- EH %>% select(-all_of(rm))
 
-# Preprocesamiento de continuas GABI:
-EHstd <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
-
 # Preprocesamiento de categoricas MAPA:
-EHstd <- get_dummies(
-  EHstd,
+EH <- get_dummies(
+  E,
   cols = categoricas,
   prefix = TRUE,
   prefix_sep = "_",
   drop_first = FALSE,
   dummify_na = TRUE
 )
-DF <- DF %>% select(-categoricas)
-ED <- ED[!(ED$Variable %in% categoricas), ]
+EH <- EH %>% select(-all_of(categoricas))
+
+
+# Preprocesamiento de continuas GABI:
+EHstd <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 # Variables personas:
 rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto')
@@ -171,27 +171,22 @@ continuas <- c('Estrato1', 'P6040', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P65
                'Iof2es', 'Iof3hes', 'Iof3ies', 'Iof6es', 'Ingtotob', 'Ingtotes', 'Ingtot') 
 EP <- EP %>% select(-all_of(rm))
 
-# Preprocesamiento de continuas GABI:
-DF <- DF %>% mutate_at(c(continuas, ordinales), ~ (scale(.) %>% as.vector()))
-
 # Preprocesamiento de binarias JUAN:
-resta1 <- function(x) {
-  y <- x - 1
-  returnValue(y)
-}
-DF <- DF %>% mutate_at(binar12, ~ (resta1(.)))
+EP <- EP %>% mutate_at(binar12, ~ (resta1(.)))
 
 # Preprocesamiento de categoricas MAPA:
-DF <- get_dummies(
-  DF,
+EP <- get_dummies(
+  EP,
   cols = categoricas,
   prefix = TRUE,
   prefix_sep = "_",
   drop_first = FALSE,
   dummify_na = TRUE
 )
-DF <- DF %>% select(-categoricas)
-ED <- ED[!(ED$Variable %in% categoricas), ]
+EP <- EP %>% select(-categoricas)
+
+# Preprocesamiento de continuas GABI:
+EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 # Preprocesamiento de tordinales HUGO:
 
@@ -204,6 +199,7 @@ ED <- ED[!(ED$Variable %in% categoricas), ]
 # Creacion de variables:
 
 # Estadisticas descriptivas:
+
 
 
 
