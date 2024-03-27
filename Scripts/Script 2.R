@@ -136,7 +136,7 @@ continuas <- c('P5000', 'P5010', 'P5100', 'P5130', 'P5140', 'Nper', 'Npersug', '
 
 EH <- EH %>% select(-all_of(rm))
 
-# Preprocesamiento de categoricas MAPA:
+# Preprocesamiento de categoricas:
 EH <- get_dummies(
   E,
   cols = categoricas,
@@ -148,7 +148,7 @@ EH <- get_dummies(
 EH <- EH %>% select(-all_of(categoricas))
 
 
-# Preprocesamiento de continuas GABI:
+# Preprocesamiento de continuas:
 EHstd <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 # Variables personas:
@@ -171,10 +171,10 @@ continuas <- c('Estrato1', 'P6040', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P65
                'Iof2es', 'Iof3hes', 'Iof3ies', 'Iof6es', 'Ingtotob', 'Ingtotes', 'Ingtot') 
 EP <- EP %>% select(-all_of(rm))
 
-# Preprocesamiento de binarias JUAN:
+# Preprocesamiento de binarias:
 EP <- EP %>% mutate_at(binar12, ~ (resta1(.)))
 
-# Preprocesamiento de categoricas MAPA:
+# Preprocesamiento de categoricas:
 EP <- get_dummies(
   EP,
   cols = categoricas,
@@ -185,10 +185,10 @@ EP <- get_dummies(
 )
 EP <- EP %>% select(-categoricas)
 
-# Preprocesamiento de continuas GABI:
+# Preprocesamiento de continuas:
 EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
-# Preprocesamiento de tordinales HUGO:
+# Preprocesamiento de tordinales:
 
 # Rename HUGO:
 library(dplyr)
@@ -287,9 +287,6 @@ base<- base %>%
     "P7500s2a1" = "Valor pensión o jubilación",
     "P7500s3" = "Recibió pensión alimenticia",
     "P7500s3a1" = "Valor pensión alimenticia")
-
-
-
 
 # Tratamiento de outliers:
 
