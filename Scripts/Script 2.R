@@ -138,7 +138,7 @@ EH <- EH %>% select(-all_of(rm))
 
 # Preprocesamiento de categoricas:
 EH <- get_dummies(
-  E,
+  EH,
   cols = categoricas,
   prefix = TRUE,
   prefix_sep = "_",
@@ -163,7 +163,7 @@ binarias12 = c('P6020','P6090', 'P6510', 'P6510s2', 'P6545', 'P6545s2', 'P6580',
 binarias <- c('Pet', 'Des', 'Ina', 'Cclasnr2', 'Cclasnr3', 'Cclasnr4', 'Cclasnr5', 'Cclasnr6', 'Cclasnr7', 'Cclasnr8', 
               'Cclasnr11')
 
-continuas <- c('Estrato1', 'P6040', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P6545s1', 'P6580s1', 'P6585s1a1', 'P6585s2a1', 
+continuas <- c('Estrato1', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P6545s1', 'P6580s1', 'P6585s1a1', 'P6585s2a1', 
                'P6585s3a1', 'P6585s4a1', 'P6590s1', 'P6600s1', 'P6610s1', 'P6620s1', 'P6630s1a1',  'P6630s2a1', 'P6630s3a1', 
                'P6630s4a1', 'P6630s6a1', 'P6750', 'P6760', 'P550', 'P6800', 'P7045', 'P7070', 'P7422s1', 'P7472s1', 'P7500s1a1',
                'P7500s2a1', 'P7500s3a1', 'P7510s1a1', 'P7510s2a1', 'P7510s3a1', 'P7510s5a1', 'P7510s6a1', 'P7510s7a1', 'Impa', 
@@ -172,7 +172,11 @@ continuas <- c('Estrato1', 'P6040', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P65
 EP <- EP %>% select(-all_of(rm))
 
 # Preprocesamiento de binarias:
-EP <- EP %>% mutate_at(binar12, ~ (resta1(.)))
+resta1 <- function(x) {
+  y <- x - 1
+  returnValue(y)
+}
+EP <- EP %>% mutate_at(binarias12, ~ (resta1(.)))
 
 # Preprocesamiento de categoricas:
 EP <- get_dummies(
@@ -193,7 +197,7 @@ EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 # Rename HUGO:
 library(dplyr)
 
-base<- base %>%
+base<- EPstd %>%
   rename(
     "numero Cuartos" = "P5000",
     "Numero Domitorios" = "P5010",
@@ -287,6 +291,29 @@ base<- base %>%
     "P7500s2a1" = "Valor pensión o jubilación",
     "P7500s3" = "Recibió pensión alimenticia",
     "P7500s3a1" = "Valor pensión alimenticia")
+
+# Analisis de covarianza:
+Corr <- as.data.frame(cor(EHstd[,-1], use = "pairwise.complete.obs"))
+
+descEH$Corr <- as.vector(rep(NA, nrow(descEH)))
+
+for (var in rownames(Corr)) {
+  COR <- Corr %>% select(var)
+  names <- colnames(Corr)[abs(COR) > 0.999]
+  names <- names[!is.na(names)]
+  descEH$Corr[descEH$Variable == var] <- toString.default(names)
+}
+
+Corr <- as.data.frame(cor(EPstd[,-1], use = "pairwise.complete.obs"))
+
+descEP$Corr <- as.vector(rep(NA, nrow(descEP)))
+
+for (var in rownames(Corr)) {
+  COR <- Corr %>% select(var)
+  names <- colnames(Corr)[abs(COR) > 0.999]
+  names <- names[!is.na(names)]
+  descEP$Corr[descEP$Variable == var] <- toString.default(names)
+}
 
 # Tratamiento de outliers:
 
