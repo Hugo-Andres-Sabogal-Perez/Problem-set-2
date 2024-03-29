@@ -304,6 +304,12 @@ for (var in rownames(Corr)) {
   descEH$Corr[descEH$Variable == var] <- toString.default(names)
 }
 
+# Variables a descartar:
+r <- c()
+
+EHstd<- EHstd %>% select(-r)
+
+# EP:
 Corr <- as.data.frame(cor(EPstd[,-1], use = "pairwise.complete.obs"))
 
 descEP$Corr <- as.vector(rep(NA, nrow(descEP)))
@@ -314,6 +320,11 @@ for (var in rownames(Corr)) {
   names <- names[!is.na(names)]
   descEP$Corr[descEP$Variable == var] <- toString.default(names)
 }
+
+# Variables a descartar:
+r <- c()
+
+EPstd <- EPstd %>% select(-r)
 
 # Tratamiento de outliers:
 
