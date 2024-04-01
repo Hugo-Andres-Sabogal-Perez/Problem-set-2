@@ -38,53 +38,18 @@ Yhogar = colnames(EH)[!(colnames(EH) %in% colnames(TH))]
 
 Ypersona = colnames(EP)[!(colnames(EP) %in% colnames(TP))]
 
-# eliminamos las filas con vars == 9
-table(EP$P6090)
-
-table(EP$P6510)
-
-table(EP$P6545)
-
-table(EP$P6580)
-
-table(EP$P6585s1)
-
-table(EP$P6585s2)
-
-table(EP$P6585s3)
-
-table(EP$P6585s4)
-
-table(EP$P6590)
-
-table(EP$P6600)
-
-table(EP$P6610)
-
-table(EP$P6620)
-
-table(EP$P7500s1)
-
-table(EP$P7500s2)
-
-table(EP$P7500s3)
-
-table(EP$P7510s1)
-
-table(EP$P7510s2)
-
-table(EP$P7510s3)
-
-table(EP$P7510s5)
-
-table(EP$P7510s6)
-
-table(EP$P7510s7)
+# eliminamos las filas de categoricas con vars == 9
 # Eliminar la categoria 9 para estas variables:
-# Se perdio unicamente un .043% de las observaciones
+# Se realiza una tabla de frecuencia para las variables==9
+
 nueve = c('P7510s7', 'P7510s6', 'P7510s5', 'P7510s3', 'P7510s2', 'P7510s1', 'P7500s3', 'P7500s2', 'P7500s1', 'P6620',
           'P6610', 'P6600', 'P6590', 'P6585s4', 'P6585s3', 'P6585s2', 'P6585s1', 'P6580', 'P6545', 'P6510', 'P6090')
 
+data_nueve<-EP %>% select(all_of(nueve))
+frecuencia_nueve <- lapply(data_nueve, table)
+frecuencia_nueve
+
+# Se perdio unicamente un .043% de las observaciones
 for(var in nueve){
   EP = EP %>% filter(.data[[var]] != 9 | is.na(.data[[var]]))
 }
