@@ -4,7 +4,7 @@
 rm(list = ls())
 
 # Set directory:
-setwd('/Users/juansilva/Documents/GitHub/Problem-set-2')
+setwd(substr(getwd(), 1, nchar(getwd()) - 8))
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
 require(tidyverse)
@@ -21,10 +21,10 @@ require(leaps)
 require(margins)
 
 # Importar la base de datos:
-EH = read.table(unz("Datos/train_hogares.csv.zip", "train_hogares.csv"), header=T, sep=",")
-EP = read.table(unz("Datos/train_personas.csv.zip", "train_personas.csv"), header=T, sep=",")
-TH = read.table(unz("Datos/test_hogares.csv.zip", "test_hogares.csv"), header=T, sep=",")
-TP = read.table(unz("Datos/test_personas.csv.zip", "test_personas.csv"), header=T, sep=",")
+EH = read.table(unz("Stores/train_hogares.csv.zip", "train_hogares.csv"), header=T, sep=",")
+EP = read.table(unz("Stores/train_personas.csv.zip", "train_personas.csv"), header=T, sep=",")
+TH = read.table(unz("Stores/test_hogares.csv.zip", "test_hogares.csv"), header=T, sep=",")
+TP = read.table(unz("Stores/test_personas.csv.zip", "test_personas.csv"), header=T, sep=",")
 
 # Seleccion de variables testeo y entrenamiento:
 colnames(EH)
