@@ -41,7 +41,6 @@ Ypersona = colnames(EP)[!(colnames(EP) %in% colnames(TP))]
 # eliminamos las filas de categoricas con vars == 9
 # Eliminar la categoria 9 para estas variables:
 # Se realiza una tabla de frecuencia para las variables==9
-
 nueve = c('P7510s7', 'P7510s6', 'P7510s5', 'P7510s3', 'P7510s2', 'P7510s1', 'P7500s3', 'P7500s2', 'P7500s1', 'P6620',
           'P6610', 'P6600', 'P6590', 'P6585s4', 'P6585s3', 'P6585s2', 'P6585s1', 'P6580', 'P6545', 'P6510', 'P6090')
 
@@ -55,9 +54,9 @@ for(var in nueve){
 }
 
 # 1. Variables personas:
-rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto')
-categoricas <- c('Dominio', 'P6040', 'P6100', 'P6240', 'Oficio', 'P6430', 'P6920', 'P7050', 'P7350', 'Depto')
-tordinal = c('P6210', 'P6870')
+rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto', 'Dominio', 'Depto')
+categoricas <- c('P6100', 'P6240', 'Oficio', 'P6430', 'P6920', 'P7050', 'P7350')
+tordinal = c('P6210', 'P6870','P6050')
 binarias12 = c('P6020','P6090', 'P6510', 'P6510s2', 'P6545', 'P6545s2', 'P6580', 'P6580s2', 'P6585s1','P6585s1a2', 
                'P6585s2', 'P6585s2a2', 'P6585s3', 'P6585s3a2', 'P6585s4', 'P6585s4a2', 'P6590', 'P6600', 'P6610', 
                'P6620', 'P6630s1', 'P6630s2', 'P6630s3', 'P6630s4', 'P6630s6', 'P7040', 'P7090', 'P7110', 
@@ -65,7 +64,7 @@ binarias12 = c('P6020','P6090', 'P6510', 'P6510s2', 'P6545', 'P6545s2', 'P6580',
                'P7500s3', 'P7505', 'P7510s1', 'P7510s2', 'P7510s3', 'P7510s5','P7510s6', 'P7510s7')
 binarias <- c('Pet', 'Des', 'Ina', 'Cclasnr2', 'Cclasnr3', 'Cclasnr4', 'Cclasnr5', 'Cclasnr6', 'Cclasnr7', 'Cclasnr8', 
               'Cclasnr11')
-continuas <- c('Estrato1', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P6545s1', 'P6580s1', 'P6585s1a1', 'P6585s2a1', 
+continuas <- c('Estrato1', 'P6040', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P6545s1', 'P6580s1', 'P6585s1a1', 'P6585s2a1', 
                'P6585s3a1', 'P6585s4a1', 'P6590s1', 'P6600s1', 'P6610s1', 'P6620s1', 'P6630s1a1',  'P6630s2a1', 'P6630s3a1', 
                'P6630s4a1', 'P6630s6a1', 'P6750', 'P6760', 'P550', 'P6800', 'P7045', 'P7070', 'P7422s1', 'P7472s1', 'P7500s1a1',
                'P7500s2a1', 'P7500s3a1', 'P7510s1a1', 'P7510s2a1', 'P7510s3a1', 'P7510s5a1', 'P7510s6a1', 'P7510s7a1', 'Impa', 
@@ -90,6 +89,9 @@ EP <- get_dummies(
   dummify_na = TRUE
 )
 EP <- EP %>% select(-categoricas)
+
+# P6210:
+EP$P6210 = ifelse(EP$P6210 == 9, 0, EP$P6210)
 
 # Preprocesamiento de continuas:
 EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
@@ -118,36 +120,41 @@ descEP = descEP[!(descEP$Variable %in% Ypersona),]
 pmujer = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
 
 # Edades:
+edad = EP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
 
+# Educacion:
+edu = EP %>%  group_by(id) %>% summarise(maxedu = max(P6210))
 
-# La base de hogares por el contrario esta super buena en terminos de missings, pero las clases no estan balanceadas.
-vars <- length(colnames(EH))
-descEH <- data.frame("Variable" = colnames(EH), "Missings" = rep(NA, vars), "Media en Y=1" = rep(NA, vars), "Media en Y=0" = rep(NA, vars),  
-                     "Desviacion Estandard en Y = 1" = rep(NA, vars), "Desviacion Estandard en Y = 0" = rep(NA, vars))
+# Seguridad:
+ss = EP %>% filter(P6050 == 1) %>% select(c('id', 'P6090'))
 
-for (col in colnames(EH)) {
-  df <- EH[, colnames(EH) == col]
-  df1 = EH[EH$Pobre == 1, colnames(EH) == col]
-  df0 = EH[EH$Pobre == 0, colnames(EH) == col]
-  NAs <- sum(is.na(df))/nrow(EP)
-  mean1 <- mean(df1, na.rm = T)
-  mean0 <- mean(df0, na.rm = T)
-  sd1 <- sqrt(var(df1, na.rm = T))
-  sd0 <- sqrt(var(df0, na.rm = T))
-  
-  descEH[descEH$Variable == col, 2] <- NAs
-  descEH[descEH$Variable == col, 3] <- mean1
-  descEH[descEH$Variable == col, 4] <- mean0
-  descEH[descEH$Variable == col, 5] <- sd1
-  descEH[descEH$Variable == col, 6] <- sd0
-}
+# Arriendos jefe y conyuge:
+ajc = EP %>% filter(P6050 == 1 | P6050 == 2) %>% select(c('id', 'P7495')) %>% group_by(id) %>%
+  summarise(arrypen = max(P7495))
+
+# ingresos no laborales:
+ingnolab = EP %>% group_by(id) %>% summarise(ingsec = max(P7505))
+
+# Jefe de hogar categoricas:
+catjefe = EP %>% filter(P6050 == 1) %>% select(-c('Orden','P6020', 'P6040','P6050','P6090', 'P6210', 'P6210s1', 
+                                             'P7495', 'P7505', 'Pet'))
+# 2. Variables hogares:
+# Juntar las bases de datos:
+EH = EH %>% left_join(pmujer, by = c('id' = 'id'))
+EH = EH %>% left_join(edad, by = c('id' = 'id'))
+EH = EH %>% left_join(edu, by = c('id' = 'id'))
+EH = EH %>% left_join(ss, by = c('id' = 'id'))
+EH = EH %>% left_join(ajc, by = c('id' = 'id'))
+EH = EH %>% left_join(ingnolab, by = c('id' = 'id'))
+EH = EH %>% left_join(catjefe, by = c('id' = 'id'))
 
 # Exclusion de variables:
 rm = c('Clase', 'Fex_c', 'Fex_dpto')
 categoricas <- c('Dominio', 'P5090', 'Depto')
-binarias <- c('Pobre', 'Indigente')
+binarias <- c('Pobre', 'Indigente', 'P6090', 'arrypen', 'ingsec')
 continuas <- c('P5000', 'P5010', 'P5100', 'P5130', 'P5140', 'Nper', 'Npersug', 'Ingtotug', 
-               'Ingtotugarr', 'Ingpcug', 'Npobres', 'Nindigentes') 
+               'Ingtotugarr', 'Ingpcug', 'Npobres', 'Nindigentes', 'pmujer', 'nninos', 'nviejos', 
+               'maxedu') 
 
 EH <- EH %>% select(-all_of(rm))
 
@@ -162,110 +169,33 @@ EH <- get_dummies(
 )
 EH <- EH %>% select(-all_of(categoricas))
 
-
 # Preprocesamiento de continuas:
 EHstd <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
-# Preprocesamiento de tordinales:
+# La base de hogares por el contrario esta super buena en terminos de missings, pero las clases no estan balanceadas.
+vars <- length(colnames(EH))
+descEH <- data.frame("Variable" = colnames(EH), "Missings" = rep(NA, vars), "Media en Y=1" = rep(NA, vars), "Media en Y=0" = rep(NA, vars),  
+                     "Desviacion Estandard en Y = 1" = rep(NA, vars), "Desviacion Estandard en Y = 0" = rep(NA, vars))
 
-# Rename HUGO:
-library(dplyr)
+for (col in colnames(EH)) {
+  df <- EH %>% select(col)
+  df1 = EH %>% filter(Pobre == 1) %>% select(col)
+  df0 = EH %>% filter(Pobre == 0) %>% select(col)
+  NAs <- sum(is.na(df))/nrow(EP)
+  mean1 <- mean(as.numeric(unlist(df1)), na.rm = T)
+  mean0 <- mean(as.numeric(unlist(df0)), na.rm = T)
+  sd1 <- sqrt(var(df1, na.rm = T))
+  sd0 <- sqrt(var(df0, na.rm = T))
+  
+  descEH[descEH$Variable == col, 2] <- NAs
+  descEH[descEH$Variable == col, 3] <- mean1
+  descEH[descEH$Variable == col, 4] <- mean0
+  descEH[descEH$Variable == col, 5] <- sd1
+  descEH[descEH$Variable == col, 6] <- sd0
+}
 
-base<- EPstd %>%
-  rename(
-    "numero Cuartos" = "P5000",
-    "Numero Domitorios" = "P5010",
-    "Tenencia_vivienda" = "P5090",
-    "Amortizaciones" = "P5100",
-    "Arriendo estimado" = "P5130",
-    "Arriendo" = "P5140",
-    "Nper" = "Personas en el hogar",
-    "Npersug" = "Personas en la unidad de gasto",
-    "Intotug" = "Ingreso antes de arriendo",
-    "Intotugarr" = "Ingreso total después de arriendos",
-    "Ingpcug" = "Ingreso percapita",
-    "Li" = "Linea de pobreza",
-    "Orden" = "ID personas",
-    "Estrato1" = "Estrato",
-    "P6020" = "SEXO",
-    "P6040" = "Edad",
-    "P6050" = "Parenteso jefe hogar",
-    "P6090" = "Afiliado",
-    "P6100" = "Régimen_seg",
-    "P6210" = "Nivel_educ",
-    "P6210s1" = "Grado escolar",
-    "P6240" = "OCUPACION",
-    "Oficio" = "categórica",
-    "P6426" = "ANTIGUIEDAD TRABAJO",
-    "P6430" = "Cargo",
-    "P6510" = "ing_mes",
-    "P6510s1" = "Cuanto recibió por horas extra",
-    "P6510s2" = "incluyo este valor en los ingresos",
-    "P6545" = "Recibió primas",
-    "P6545s1" = "cuanto recibió primas",
-    "P6545s2" = "incluyo primas en ingreso",
-    "P6580" = "recibió bonificaciones",
-    "P6580s1" = "cuanto recibió por bonificaciones",
-    "P6580s2" = "incluyo bonificaciones en ingreso",
-    "P6585s1" = "recibió subsidio alimentación",
-    "P6585s1a1" = "cuanto recibió subsidio alimentación",
-    "P6585s1a2" = "incluyo en ingreso subsidio alimentación",
-    "P6585s2" = "subsidio transporte",
-    "P6585s2a1" = "cuanto fue subsidio transporte",
-    "P6585s2a1" = "incluyo en ingreso subsidio transporte",
-    "P6585S3" = "SUBSIDIO FAMILIAR",
-    "P6585S3a1" = "cuanto recibió subsidio familiar",
-    "P6585S3a3" = "incluyo en ing subsidio familiar",
-    "P6585S4" = "incluyo en subsidio educativo",
-    "P6585S4a1" = "cuanto sub educativo",
-    "P6585S4a2" = "incluyó sub educativo",
-    "P6590" = "alimentos pago trabajo",
-    "P6590s1" = "cuanto recibió en alimentos",
-    "P6600" = "recibió vivienda por pago de trabajo",
-    "P6600s1" = "cuanto recibió por ese pago",
-    "P6610" = "Utiliza transporte de impresa",
-    "P6610" = "Utiliza transporte de impresa",
-    "P6620" = "bono redimible",
-    "P6620S1" = "cuantos bonos redimibles",
-    "P630S1" = "recibió prima servicio",
-    "P630S1a1" = "cuanto prima servicio",
-    "P630S2" = "prima navidad",
-    "P630S2a1" = "cuanto prima navidad",
-    "P6630s3" = "Prima vacaciones",
-    "P6630s3a1" = "Cuanto prima de vacaciones",
-    "P6630s4" = "Viaticos",
-    "P6630s4a1" = "Cuantos viáticos",
-    "P6630s6" = "Bonificaciones",
-    "P6630s6a1" = "Cuanto Bonificaciones",
-    "P6750" = "Ganancia neta ocupación mes pasado",
-    "P6760" = "A cuantos meses le corresponde lo recibido en la anterior",
-    "P550" = "Ganancia neta últimos doce meses",
-    "P6870" = "Trabajadores empresa",
-    "P6920" = "Cotizando pensiones",
-    "P7040" = "Segundo trabajo",
-    "P7045" = "Cuantas horas segundo trabajo",
-    "P7050" = "Cargo segundo trabajo",
-    "P7070" = "Cuanto segundo trabajo",
-    "P7090" = "Quiere más trabajo",
-    "P7710" = "Diligencias para trabajar más horas",
-    "P7120" = "Disponible para trabajar más horas",
-    "P7140s1" = "Desea mejorar capacidades",
-    "P7140s2" = "Deseas mejorar ingresos",
-    "P7150" = "Diligencias cambio trabajo",
-    "P7160" = "Disponible para empezar nuevo trabajo",
-    "P7310" = "Primera vez buscando trabajo",
-    "P7350" = "Ultimo cargo (desocupados)",
-    "P7422" = "Trabajo remunerado (desocupados)",
-    "P7422s1" = "cuanto Trabajo remunerado (desocupados)",
-    "P7472" = "Trabajo remunerado (desocupados)",
-    "P7472s1" = "Cuanto Trabajo remunerado (desocupados)",
-    "P7495" = "Recibió arriendos o pensiones",
-    "P7500s1" = "Valor arriendos y/o pensiones.",
-    "P7500s2" = "Recibió pensión o jubilación",
-    "P7500s2a1" = "Valor pensión o jubilación",
-    "P7500s3" = "Recibió pensión alimenticia",
-    "P7500s3a1" = "Valor pensión alimenticia")
-
+# Eliminacion de variables con mas de 21% de missings:
+E
 # Analisis de covarianza:
 Corr <- as.data.frame(cor(EHstd[,-1], use = "pairwise.complete.obs"))
 
@@ -282,23 +212,6 @@ for (var in rownames(Corr)) {
 r <- c()
 
 EHstd<- EHstd %>% select(-r)
-
-# EP:
-Corr <- as.data.frame(cor(EPstd[,-1], use = "pairwise.complete.obs"))
-
-descEP$Corr <- as.vector(rep(NA, nrow(descEP)))
-
-for (var in rownames(Corr)) {
-  COR <- Corr %>% select(var)
-  names <- colnames(Corr)[abs(COR) > 0.999]
-  names <- names[!is.na(names)]
-  descEP$Corr[descEP$Variable == var] <- toString.default(names)
-}
-
-# Variables a descartar:
-r <- c()
-
-EPstd <- EPstd %>% select(-r)
 
 # Tratamiento de outliers:
 
