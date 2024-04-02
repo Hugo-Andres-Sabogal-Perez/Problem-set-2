@@ -4,7 +4,7 @@
 rm(list = ls())
 
 # Set directory:
-setwd(substr(getwd(), 1, nchar(getwd()) - 8))
+setwd('/Users/juansilva/Documents/GitHub/Problem-set-2')
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
 require(tidyverse)
@@ -54,21 +54,71 @@ for(var in nueve){
   EP = EP %>% filter(.data[[var]] != 9 | is.na(.data[[var]]))
 }
 
+# 1. Variables personas:
+rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto')
+categoricas <- c('Dominio', 'P6040', 'P6100', 'P6240', 'Oficio', 'P6430', 'P6920', 'P7050', 'P7350', 'Depto')
+tordinal = c('P6210', 'P6870')
+binarias12 = c('P6020','P6090', 'P6510', 'P6510s2', 'P6545', 'P6545s2', 'P6580', 'P6580s2', 'P6585s1','P6585s1a2', 
+               'P6585s2', 'P6585s2a2', 'P6585s3', 'P6585s3a2', 'P6585s4', 'P6585s4a2', 'P6590', 'P6600', 'P6610', 
+               'P6620', 'P6630s1', 'P6630s2', 'P6630s3', 'P6630s4', 'P6630s6', 'P7040', 'P7090', 'P7110', 
+               'P7120', 'P7140s1', 'P7140s2', 'P7150', 'P7160', 'P7310', 'P7422', 'P7472', 'P7495', 'P7500s1', 'P7500s2',
+               'P7500s3', 'P7505', 'P7510s1', 'P7510s2', 'P7510s3', 'P7510s5','P7510s6', 'P7510s7')
+binarias <- c('Pet', 'Des', 'Ina', 'Cclasnr2', 'Cclasnr3', 'Cclasnr4', 'Cclasnr5', 'Cclasnr6', 'Cclasnr7', 'Cclasnr8', 
+              'Cclasnr11')
+continuas <- c('Estrato1', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P6545s1', 'P6580s1', 'P6585s1a1', 'P6585s2a1', 
+               'P6585s3a1', 'P6585s4a1', 'P6590s1', 'P6600s1', 'P6610s1', 'P6620s1', 'P6630s1a1',  'P6630s2a1', 'P6630s3a1', 
+               'P6630s4a1', 'P6630s6a1', 'P6750', 'P6760', 'P550', 'P6800', 'P7045', 'P7070', 'P7422s1', 'P7472s1', 'P7500s1a1',
+               'P7500s2a1', 'P7500s3a1', 'P7510s1a1', 'P7510s2a1', 'P7510s3a1', 'P7510s5a1', 'P7510s6a1', 'P7510s7a1', 'Impa', 
+               'Isa', 'Ie', 'Imdi', 'Iof1', 'Iof2', 'Iof3h', 'Iof3i', 'Iof6', 'Impaes', 'Isaes', 'Iees', 'Imdies', 'Iof1es', 
+               'Iof2es', 'Iof3hes', 'Iof3ies', 'Iof6es', 'Ingtotob', 'Ingtotes', 'Ingtot') 
+EP <- EP %>% select(-all_of(rm))
+
+# Preprocesamiento de binarias:
+resta1 <- function(x) {
+  y <- x - 1
+  returnValue(y)
+}
+EP <- EP %>% mutate_at(binarias12, ~ (resta1(.)))
+
+# Preprocesamiento de categoricas:
+EP <- get_dummies(
+  EP,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = TRUE
+)
+EP <- EP %>% select(-categoricas)
+
+# Preprocesamiento de continuas:
+EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
+
 # Porcentaje de missings por variable:
 # Hay un cantidad de variables que no sirven de la base ep (demasiados missings/constantes)
 vars <- length(colnames(EP))
 descEP <- data.frame("Variable" = colnames(EP), "Missings" = rep(NA, vars), "Media" = rep(NA, vars), "Desviacion Estandard" = rep(NA, vars))
 
 for (col in colnames(EP)) {
-  df <- EP[, colnames(EP) == col]
+  df <- EP %>% select(col)
   NAs <- sum(is.na(df))/nrow(EP)
-  mean <- mean(df, na.rm = T)
+  mean <- mean(as.numeric(unlist(df)), na.rm = T)
   sd <- sqrt(var(df, na.rm = T))
   
   descEP[descEP$Variable == col, 2] <- NAs
   descEP[descEP$Variable == col, 3] <- mean
   descEP[descEP$Variable == col, 4] <- sd
 }
+
+# Agrupar variables de personas:
+descEP = descEP[descEP$Missings < .2,]
+descEP = descEP[!(descEP$Variable %in% Ypersona),]
+
+# Porcentaje de mujeres:
+pmujer = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
+
+# Edades:
+
 
 # La base de hogares por el contrario esta super buena en terminos de missings, pero las clases no estan balanceadas.
 vars <- length(colnames(EH))
@@ -115,47 +165,6 @@ EH <- EH %>% select(-all_of(categoricas))
 
 # Preprocesamiento de continuas:
 EHstd <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
-
-# Variables personas:
-rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto')
-categoricas <- c('Dominio', 'P6040', 'P6100', 'P6240', 'Oficio', 'P6430', 'P6920', 'P7050', 'P7350', 'Depto')
-tordinal = c('P6210', 'P6870')
-binarias12 = c('P6020','P6090', 'P6510', 'P6510s2', 'P6545', 'P6545s2', 'P6580', 'P6580s2', 'P6585s1','P6585s1a2', 
-               'P6585s2', 'P6585s2a2', 'P6585s3', 'P6585s3a2', 'P6585s4', 'P6585s4a2', 'P6590', 'P6600', 'P6610', 
-               'P6620', 'P6630s1', 'P6630s2', 'P6630s3', 'P6630s4', 'P6630s6', 'P7040', 'P7090', 'P7110', 
-               'P7120', 'P7140s1', 'P7140s2', 'P7150', 'P7160', 'P7310', 'P7422', 'P7472', 'P7495', 'P7500s1', 'P7500s2',
-               'P7500s3', 'P7505', 'P7510s1', 'P7510s2', 'P7510s3', 'P7510s5','P7510s6', 'P7510s7')
-binarias <- c('Pet', 'Des', 'Ina', 'Cclasnr2', 'Cclasnr3', 'Cclasnr4', 'Cclasnr5', 'Cclasnr6', 'Cclasnr7', 'Cclasnr8', 
-              'Cclasnr11')
-
-continuas <- c('Estrato1', 'P6210s1', 'P6426', 'P6500', 'P6510s1', 'P6545s1', 'P6580s1', 'P6585s1a1', 'P6585s2a1', 
-               'P6585s3a1', 'P6585s4a1', 'P6590s1', 'P6600s1', 'P6610s1', 'P6620s1', 'P6630s1a1',  'P6630s2a1', 'P6630s3a1', 
-               'P6630s4a1', 'P6630s6a1', 'P6750', 'P6760', 'P550', 'P6800', 'P7045', 'P7070', 'P7422s1', 'P7472s1', 'P7500s1a1',
-               'P7500s2a1', 'P7500s3a1', 'P7510s1a1', 'P7510s2a1', 'P7510s3a1', 'P7510s5a1', 'P7510s6a1', 'P7510s7a1', 'Impa', 
-               'Isa', 'Ie', 'Imdi', 'Iof1', 'Iof2', 'Iof3h', 'Iof3i', 'Iof6', 'Impaes', 'Isaes', 'Iees', 'Imdies', 'Iof1es', 
-               'Iof2es', 'Iof3hes', 'Iof3ies', 'Iof6es', 'Ingtotob', 'Ingtotes', 'Ingtot') 
-EP <- EP %>% select(-all_of(rm))
-
-# Preprocesamiento de binarias:
-resta1 <- function(x) {
-  y <- x - 1
-  returnValue(y)
-}
-EP <- EP %>% mutate_at(binarias12, ~ (resta1(.)))
-
-# Preprocesamiento de categoricas:
-EP <- get_dummies(
-  EP,
-  cols = categoricas,
-  prefix = TRUE,
-  prefix_sep = "_",
-  drop_first = FALSE,
-  dummify_na = TRUE
-)
-EP <- EP %>% select(-categoricas)
-
-# Preprocesamiento de continuas:
-EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 # Preprocesamiento de tordinales:
 
