@@ -19,6 +19,8 @@ require(tidytable)
 require(VIM)
 require(leaps)
 require(margins)
+library(matrixStats)
+require(fBasics)
 
 # Importar la base de datos:
 EH = read.table(unz("Stores/train_hogares.csv.zip", "train_hogares.csv"), header=T, sep=",")
@@ -58,10 +60,6 @@ for(var in nueve){
 # Hay un cantidad de variables que no sirven de la base ep (demasiados missings/constantes)
 vars <- length(colnames(EP))
 descEP <- data.frame("Variable" = colnames(EP)[c(-1,-4)])
-EP<- EP %>% select(-Dominio, -id)
-descEP$mean<- colMeans(EP)
-
-
 
 
 # La base de hogares por el contrario esta super buena en terminos de missings, pero las clases no estan balanceadas.
@@ -86,6 +84,41 @@ for (col in colnames(EH)) {
   descEH[descEH$Variable == col, 6] <- sd0
 }
 
+rename_hogares<-function(datos_hogares, train){
+  
+  hogares<-datos_hogares %>%rename("n_cuartos" = "P5000",
+                                   "n_domitorios" = "P5010",
+                                   "tenviv" = "P5090",
+                                   "amort" = "P5100",
+                                   "arriendest" = "P5130",
+                                   "arriend" = "P5140")
+
+  attr(hogares$n_cuartos, "label") <- "Numero de cuartos"
+  attr(hogares$n_domitorios, "label") <- "Numero de dormitorios"
+  attr(hogares$tenviv, "label") <- "Tenencia vivienda"
+  attr(hogares$arriendest, "label") <- "Arriendo estimado"
+  attr(hogares$arriend, "label") <- "Arriendo"
+  attr(hogares$Nper, "label") <- "Numero de personas en el hogar"
+  attr(hogares$Npersug, "label") <- "Numero de personas en el hogar por unidad de gasto"
+  attr(hogares$Li, "label")<-  "Linea de indigencia"
+  attr(hogares$Lp, "label")<-  "Linea de pobreza"
+  
+  if (train==T){
+    attr(hogares$Ingtotug, "label") <- "Ingreso ug antes arriendos/usufructos"
+    attr(hogares$Ingtotugarr, "label") <- "Ingreso ug despues arriendos/usufructos"
+    attr(hogares$Ingpcug, "label") <- "Ingreso per capita ug despues arriendos/usufructos"
+    attr(hogares$Nindigentes, "label") <- "Numero de indigentes"
+    attr(hogares$Npobres, "label") <- "Numero de pobres"
+    
+  }
+       
+       
+  return(hogares)
+  
+}
+
+EH<-rename_hogares(EH, T)
+
 # Exclusion de variables:
 rm = c('Clase', 'Fex_c', 'Fex_dpto')
 categoricas <- c('Dominio', 'P5090', 'Depto')
@@ -93,7 +126,7 @@ binarias <- c('Pobre', 'Indigente')
 continuas <- c('P5000', 'P5010', 'P5100', 'P5130', 'P5140', 'Nper', 'Npersug', 'Ingtotug', 
                'Ingtotugarr', 'Ingpcug', 'Npobres', 'Nindigentes') 
 
-EH <- EH %>% select(-all_of(rm))
+
 
 # Preprocesamiento de categoricas:
 EH <- get_dummies(
@@ -104,7 +137,6 @@ EH <- get_dummies(
   drop_first = FALSE,
   dummify_na = TRUE
 )
-EH <- EH %>% select(-all_of(categoricas))
 
 
 # Preprocesamiento de continuas:
@@ -146,110 +178,99 @@ EP <- get_dummies(
   drop_first = FALSE,
   dummify_na = TRUE
 )
-EP <- EP %>% select(-categoricas)
 
 # Preprocesamiento de continuas:
 EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 # Preprocesamiento de tordinales:
 
-# Rename HUGO:
-library(dplyr)
+EH<-rename_hogares(EH)
 
-base<- EPstd %>%
-  rename(
-    "numero Cuartos" = "P5000",
-    "Numero Domitorios" = "P5010",
-    "Tenencia_vivienda" = "P5090",
-    "Amortizaciones" = "P5100",
-    "Arriendo estimado" = "P5130",
-    "Arriendo" = "P5140",
-    "Nper" = "Personas en el hogar",
-    "Npersug" = "Personas en la unidad de gasto",
-    "Intotug" = "Ingreso antes de arriendo",
-    "Intotugarr" = "Ingreso total después de arriendos",
-    "Ingpcug" = "Ingreso percapita",
-    "Li" = "Linea de pobreza",
-    "Orden" = "ID personas",
-    "Estrato1" = "Estrato",
-    "P6020" = "SEXO",
-    "P6040" = "Edad",
-    "P6050" = "Parenteso jefe hogar",
-    "P6090" = "Afiliado",
-    "P6100" = "Régimen_seg",
-    "P6210" = "Nivel_educ",
-    "P6210s1" = "Grado escolar",
-    "P6240" = "OCUPACION",
-    "Oficio" = "categórica",
-    "P6426" = "ANTIGUIEDAD TRABAJO",
-    "P6430" = "Cargo",
-    "P6510" = "ing_mes",
-    "P6510s1" = "Cuanto recibió por horas extra",
-    "P6510s2" = "incluyo este valor en los ingresos",
-    "P6545" = "Recibió primas",
-    "P6545s1" = "cuanto recibió primas",
-    "P6545s2" = "incluyo primas en ingreso",
-    "P6580" = "recibió bonificaciones",
-    "P6580s1" = "cuanto recibió por bonificaciones",
-    "P6580s2" = "incluyo bonificaciones en ingreso",
-    "P6585s1" = "recibió subsidio alimentación",
-    "P6585s1a1" = "cuanto recibió subsidio alimentación",
-    "P6585s1a2" = "incluyo en ingreso subsidio alimentación",
-    "P6585s2" = "subsidio transporte",
-    "P6585s2a1" = "cuanto fue subsidio transporte",
-    "P6585s2a1" = "incluyo en ingreso subsidio transporte",
-    "P6585S3" = "SUBSIDIO FAMILIAR",
-    "P6585S3a1" = "cuanto recibió subsidio familiar",
-    "P6585S3a3" = "incluyo en ing subsidio familiar",
-    "P6585S4" = "incluyo en subsidio educativo",
-    "P6585S4a1" = "cuanto sub educativo",
-    "P6585S4a2" = "incluyó sub educativo",
-    "P6590" = "alimentos pago trabajo",
-    "P6590s1" = "cuanto recibió en alimentos",
-    "P6600" = "recibió vivienda por pago de trabajo",
-    "P6600s1" = "cuanto recibió por ese pago",
-    "P6610" = "Utiliza transporte de impresa",
-    "P6610" = "Utiliza transporte de impresa",
-    "P6620" = "bono redimible",
-    "P6620S1" = "cuantos bonos redimibles",
-    "P630S1" = "recibió prima servicio",
-    "P630S1a1" = "cuanto prima servicio",
-    "P630S2" = "prima navidad",
-    "P630S2a1" = "cuanto prima navidad",
-    "P6630s3" = "Prima vacaciones",
-    "P6630s3a1" = "Cuanto prima de vacaciones",
-    "P6630s4" = "Viaticos",
-    "P6630s4a1" = "Cuantos viáticos",
-    "P6630s6" = "Bonificaciones",
-    "P6630s6a1" = "Cuanto Bonificaciones",
-    "P6750" = "Ganancia neta ocupación mes pasado",
-    "P6760" = "A cuantos meses le corresponde lo recibido en la anterior",
-    "P550" = "Ganancia neta últimos doce meses",
-    "P6870" = "Trabajadores empresa",
-    "P6920" = "Cotizando pensiones",
-    "P7040" = "Segundo trabajo",
-    "P7045" = "Cuantas horas segundo trabajo",
-    "P7050" = "Cargo segundo trabajo",
-    "P7070" = "Cuanto segundo trabajo",
-    "P7090" = "Quiere más trabajo",
-    "P7710" = "Diligencias para trabajar más horas",
-    "P7120" = "Disponible para trabajar más horas",
-    "P7140s1" = "Desea mejorar capacidades",
-    "P7140s2" = "Deseas mejorar ingresos",
-    "P7150" = "Diligencias cambio trabajo",
-    "P7160" = "Disponible para empezar nuevo trabajo",
-    "P7310" = "Primera vez buscando trabajo",
-    "P7350" = "Ultimo cargo (desocupados)",
-    "P7422" = "Trabajo remunerado (desocupados)",
-    "P7422s1" = "cuanto Trabajo remunerado (desocupados)",
-    "P7472" = "Trabajo remunerado (desocupados)",
-    "P7472s1" = "Cuanto Trabajo remunerado (desocupados)",
-    "P7495" = "Recibió arriendos o pensiones",
-    "P7500s1" = "Valor arriendos y/o pensiones.",
-    "P7500s2" = "Recibió pensión o jubilación",
-    "P7500s2a1" = "Valor pensión o jubilación",
-    "P7500s3" = "Recibió pensión alimenticia",
-    "P7500s3a1" = "Valor pensión alimenticia")
+rename_personas<-function(datos_personas){
+  
+  base<- EPstd %>%
+    rename("Estrato1" = "Estrato",
+           "P6020" = "SEXO",
+           "P6040" = "Edad",
+           "P6050" = "Parenteso jefe hogar",
+           "P6090" = "Afiliado",
+           "P6100" = "Régimen_seg",
+           "P6210" = "Nivel_educ",
+           "P6210s1" = "Grado_escolar",
+           "P6240" = "OCUPACION",
+           "Oficio" = "categórica",
+           "P6426" = "ANTIGUIEDAD TRABAJO",
+           "P6430" = "Cargo",
+           "P6510" = "ing_mes",
+           "P6510s1" = "Cuanto recibió por horas extra",
+           "P6510s2" = "incluyo este valor en los ingresos",
+           "P6545" = "Recibió primas",
+           "P6545s1" = "cuanto recibió primas",
+           "P6545s2" = "incluyo primas en ingreso",
+           "P6580" = "recibió bonificaciones",
+           "P6580s1" = "cuanto recibió por bonificaciones",
+           "P6580s2" = "incluyo bonificaciones en ingreso",
+           "P6585s1" = "recibió subsidio alimentación",
+           "P6585s1a1" = "cuanto recibió subsidio alimentación",
+           "P6585s1a2" = "incluyo en ingreso subsidio alimentación",
+           "P6585s2" = "subsidio transporte",
+           "P6585s2a1" = "cuanto fue subsidio transporte",
+           "P6585s2a1" = "incluyo en ingreso subsidio transporte",
+           "P6585S3" = "SUBSIDIO FAMILIAR",
+           "P6585S3a1" = "cuanto recibió subsidio familiar",
+           "P6585S3a3" = "incluyo en ing subsidio familiar",
+           "P6585S4" = "incluyo en subsidio educativo",
+           "P6585S4a1" = "cuanto sub educativo",
+           "P6585S4a2" = "incluyó sub educativo",
+           "P6590" = "alimentos pago trabajo",
+           "P6590s1" = "cuanto recibió en alimentos",
+           "P6600" = "recibió vivienda por pago de trabajo",
+           "P6600s1" = "cuanto recibió por ese pago",
+           "P6610" = "Utiliza transporte de impresa",
+           "P6610" = "Utiliza transporte de impresa",
+           "P6620" = "bono redimible",
+           "P6620S1" = "cuantos bonos redimibles",
+           "P630S1" = "recibió prima servicio",
+           "P630S1a1" = "cuanto prima servicio",
+           "P630S2" = "prima navidad",
+           "P630S2a1" = "cuanto prima navidad",
+           "P6630s3" = "Prima vacaciones",
+           "P6630s3a1" = "Cuanto prima de vacaciones",
+           "P6630s4" = "Viaticos",
+           "P6630s4a1" = "Cuantos viáticos",
+           "P6630s6" = "Bonificaciones",
+           "P6630s6a1" = "Cuanto Bonificaciones",
+           "P6750" = "Ganancia neta ocupación mes pasado",
+           "P6760" = "meses ganacia neta mes pasado",
+           "P550" = "Ganancia neta últimos doce meses",
+           "P6870" = "Trabajadores empresa",
+           "P6920" = "Cotizando pensiones",
+           "P7040" = "Segundo trabajo",
+           "P7045" = "Cuantas horas segundo trabajo",
+           "P7050" = "Cargo segundo trabajo",
+           "P7070" = "Cuanto segundo trabajo",
+           "P7090" = "Quiere más trabajo",
+           "P7710" = "Diligencias para trabajar más horas",
+           "P7120" = "Disponible para trabajar más horas",
+           "P7140s1" = "Desea mejorar capacidades",
+           "P7140s2" = "Deseas mejorar ingresos",
+           "P7150" = "Diligencias cambio trabajo",
+           "P7160" = "Disponible para empezar nuevo trabajo",
+           "P7310" = "Primera vez buscando trabajo",
+           "P7350" = "Ultimo cargo (desocupados)",
+           "P7422" = "Trabajo remunerado (desocupados)",
+           "P7422s1" = "cuanto Trabajo remunerado (desocupados)",
+           "P7472" = "Trabajo remunerado (desocupados)",
+           "P7472s1" = "Cuanto Trabajo remunerado (desocupados)",
+           "P7495" = "Recibió arriendos o pensiones",
+           "P7500s1" = "Valor arriendos y/o pensiones.",
+           "P7500s2" = "Recibió pensión o jubilación",
+           "P7500s2a1" = "Valor pensión o jubilación",
+           "P7500s3" = "Recibió pensión alimenticia",
+           "P7500s3a1" = "Valor pensión alimenticia")
+  
+}
+
 
 # Analisis de covarianza:
 Corr <- as.data.frame(cor(EHstd[,-1], use = "pairwise.complete.obs"))
