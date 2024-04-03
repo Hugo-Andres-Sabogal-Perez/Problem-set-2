@@ -329,6 +329,10 @@ list = ls()
 list = list[!(list %in% c('EHstd', 'THstd'))]
 rm(list = list)
 
+# Guardamos las bases de datos limpias:
+write.csv(x = EHstd, file = "Stores/EHstd.csv", row.names = FALSE)
+write.csv(x = THstd, file = "Stores/THstd.csv", row.names = FALSE)
+
 # Imputación de variables por knn:
 # k = 5
 EHimp <- kNN(EHstd)
