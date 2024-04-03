@@ -116,6 +116,9 @@ for (col in colnames(EP)) {
 descEP = descEP[descEP$Missings < .2,]
 descEP = descEP[!(descEP$Variable %in% Ypersona),]
 
+miss = descEP$Variable[descEP$Missings < .2]
+EP = EP %>% select(all_of(miss))
+
 # Porcentaje de mujeres:
 pmujer = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
 
@@ -138,8 +141,7 @@ ingnolab = EP %>% group_by(id) %>% summarise(ingsec = max(P7505))
 # Jefe de hogar categoricas:
 catjefe = EP %>% filter(P6050 == 1) %>% select(-c('Orden','P6020', 'P6040','P6050','P6090', 'P6210', 'P6210s1', 
                                              'P7495', 'P7505', 'Pet'))
-# 2. Variables hogares:
-# Juntar las bases de datos:
+# Juntar bases de datos:
 EH = EH %>% left_join(pmujer, by = c('id' = 'id'))
 EH = EH %>% left_join(edad, by = c('id' = 'id'))
 EH = EH %>% left_join(edu, by = c('id' = 'id'))
@@ -148,6 +150,67 @@ EH = EH %>% left_join(ajc, by = c('id' = 'id'))
 EH = EH %>% left_join(ingnolab, by = c('id' = 'id'))
 EH = EH %>% left_join(catjefe, by = c('id' = 'id'))
 
+# 1.1 Test:
+rm = rm[rm %in% colnames(TP)]
+categoricas <- categoricas[categoricas %in% colnames(TP)]
+binarias12 = binarias12[binarias12 %in% colnames(TP)]
+binarias <- binarias[binarias %in% colnames(TP)]
+continuas <- continuas[continuas %in% colnames(TP)] 
+TP <- TP %>% select(-all_of(rm))
+
+# Preprocesamiento de binarias:
+TP <- TP %>% mutate_at(binarias12, ~ (resta1(.)))
+
+# Preprocesamiento de categoricas:
+TP <- get_dummies(
+  TP,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = TRUE
+)
+TP <- TP %>% select(-categoricas)
+
+# P6210:
+TP$P6210 = ifelse(TP$P6210 == 9, 0, TP$P6210)
+
+# Preprocesamiento de continuas:
+TPstd <- TP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
+
+# Porcentaje de mujeres:
+pmujer = TP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
+
+# Edades:
+edad = TP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
+
+# Educacion:
+edu = TP %>%  group_by(id) %>% summarise(maxedu = max(P6210))
+
+# Seguridad:
+ss = TP %>% filter(P6050 == 1) %>% select(c('id', 'P6090'))
+
+# Arriendos jefe y conyuge:
+ajc = TP %>% filter(P6050 == 1 | P6050 == 2) %>% select(c('id', 'P7495')) %>% group_by(id) %>%
+  summarise(arrypen = max(P7495))
+
+# ingresos no laborales:
+ingnolab = TP %>% group_by(id) %>% summarise(ingsec = max(P7505))
+
+# Jefe de hogar categoricas:
+catjefe = TP %>% filter(P6050 == 1) %>% select(-c('Orden','P6020', 'P6040','P6050','P6090', 'P6210', 'P6210s1', 
+                                                  'P7495', 'P7505', 'Pet'))
+# Juntar las bases de datos:
+TH = TH %>% left_join(pmujer, by = c('id' = 'id'))
+TH = TH %>% left_join(edad, by = c('id' = 'id'))
+TH = TH %>% left_join(edu, by = c('id' = 'id'))
+TH = TH %>% left_join(ss, by = c('id' = 'id'))
+TH = TH %>% left_join(ajc, by = c('id' = 'id'))
+TH = TH %>% left_join(ingnolab, by = c('id' = 'id'))
+TH = TH %>% left_join(catjefe, by = c('id' = 'id'))
+
+
+## 2. Variables de Hogares:
 # Exclusion de variables:
 rm = c('Clase', 'Fex_c', 'Fex_dpto')
 categoricas <- c('Dominio', 'P5090', 'Depto')
@@ -168,6 +231,9 @@ EH <- get_dummies(
   dummify_na = TRUE
 )
 EH <- EH %>% select(-all_of(categoricas))
+
+# Estandarizacion de Lp:
+EH$Lp = (EH$Lp - mean(EH$Ingpcug, na.rm =T))/sqrt(var(EH$Ingpcug, na.rm = T))
 
 # Preprocesamiento de continuas:
 EHstd <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
@@ -195,7 +261,10 @@ for (col in colnames(EH)) {
 }
 
 # Eliminacion de variables con mas de 21% de missings:
-E
+miss = descEH$Variable[descEH$Missings < .21]
+EHstd = EHstd %>% select(all_of(miss))
+
+descEH = descEH[descEH$Missings < .21,]
 # Analisis de covarianza:
 Corr <- as.data.frame(cor(EHstd[,-1], use = "pairwise.complete.obs"))
 
@@ -209,15 +278,61 @@ for (var in rownames(Corr)) {
 }
 
 # Variables a descartar:
-r <- c()
+r <- c('P6100_NA', 'P7050_NA', 'P6430_NA', 'P6920_NA', 'Depto_11', 'Li')
 
-EHstd<- EHstd %>% select(-r)
+EHstd<- EHstd %>% select(-all_of(r))
+
+# Eliminacion de las Y que no necesitamos:
+Yhogar = Yhogar[c(1, 2, 5, 6, 7)]
+EHstd<- EHstd %>% select(-all_of(Yhogar))
 
 # Tratamiento de outliers:
+continuas = c('P5000', 'P5010', 'P5130', 'P5140', 'Nper', 'Npersug', 
+              'pmujer', 'nninos', 'nviejos','maxedu')
+
+EHstd = EHstd %>% mutate_at(continuas, ~ (ifelse((.) >= 2.5, 2.5, (.))))
+EHstd = EHstd %>% mutate_at(continuas, ~ (ifelse((.) <= -2.5, -2.5, (.))))
+
+# 2.1 Testeo:
+rm = rm[rm %in% colnames(TH)]
+categoricas <- categoricas[categoricas %in% colnames(TH)]
+binarias12 = binarias12[binarias12 %in% colnames(TH)]
+binarias <- binarias[binarias %in% colnames(TH)]
+continuas <- continuas[continuas %in% colnames(TH)] 
+TH <- TH %>% select(-all_of(rm))
+
+# Preprocesamiento de categoricas:
+TH <- get_dummies(
+  TH,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = TRUE
+)
+TH <- TH %>% select(-all_of(categoricas))
+
+# Estandarizacion de Lp:
+TH$Lp =  as.vector(rep(EH$Lp[1], nrow(TH)))
+
+# Preprocesamiento de continuas:
+THstd <- TH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
+
+# Seleccion de variables:
+THstd = THstd %>% select(colnames(THstd)[colnames(THstd) %in% colnames(EHstd)])
+colnames(EHstd)[!(colnames(EHstd) %in% colnames(THstd))]
+
+EHstd = EHstd %>% select(-c('Oficio_0', 'P7050_9', 'Dominio_BOGOTA'))
 
 # Tratamiento de missings:
+list = ls()
+list = list[!(list %in% c('EHstd', 'THstd'))]
+rm(list = list)
 
-# Creacion de variables:
+# Imputación de variables por knn:
+# k = 5
+EHimp <- kNN(EHstd)
+DFimp <- DFimp[,]
 
 # Estadisticas descriptivas:
 
