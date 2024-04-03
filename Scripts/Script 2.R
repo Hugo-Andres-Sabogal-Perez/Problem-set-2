@@ -4,7 +4,7 @@
 rm(list = ls())
 
 # Set directory:
-setwd('/Users/juansilva/Documents/GitHub/Problem-set-2')
+setwd(substr(getwd(), 1, nchar(getwd()) - 8))
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
 require(tidyverse)
@@ -341,6 +341,7 @@ EP = read.table()
 # k = 5
 EHimp <- kNN(EHstd)
 DFimp <- DFimp[,]
+
 
 # Estadisticas descriptivas:
 
