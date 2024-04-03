@@ -333,10 +333,16 @@ rm(list = list)
 write.csv(x = EHstd, file = "Stores/EHstd.csv", row.names = FALSE)
 write.csv(x = THstd, file = "Stores/THstd.csv", row.names = FALSE)
 
+# Importamos las bases de datos limpias:
+EH = read.table()
+EP = read.table()
+
 # Imputación de variables por knn:
 # k = 5
 EHimp <- kNN(EHstd)
 DFimp <- DFimp[,]
 
 # Estadisticas descriptivas:
+
+## Modelaje:
 
