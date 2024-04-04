@@ -48,11 +48,14 @@ for (i in 13:ncol(train_H)) {
 #Convierto en facotores la categoricas para test
 test_H[, 13:ncol(test_H)] <- lapply(test_H[, 13:ncol(test_H)], factor)
 
-
+# Luego, asignas las etiquetas "si" y "no" a los niveles de los factores
+for (i in 13:ncol(test_H)) {
+  levels(test_H[[i]]) <- c("no", "si")
+}
 
 #Configuracion de cross validation
 ctrl<- trainControl(method = "cv",
-                    number = 10,
+                    number = 5,
                     classProbs = TRUE,
                     savePredictions = T)
 
@@ -70,5 +73,3 @@ modelO1 <- train(Pobre~.,
                 )
                  
 )
-
-varcov<-var(train_H)
