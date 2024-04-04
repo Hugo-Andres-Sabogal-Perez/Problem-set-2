@@ -1,6 +1,6 @@
 rm(list = ls())
 # Set directory:
-setwd("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2")
+setwd("")
 
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
@@ -90,13 +90,45 @@ for (col in colnames(EP)) {
   descEP[descEP$Variable == col, 4] <- sd
 }
 
-
+"
 # Agrupar variables de personas:
 descEP = descEP[descEP$Missings < .2,]
 descEP = descEP[!(descEP$Variable %in% Ypersona),]
 
 miss = descEP$Variable[descEP$Missings < .2]
 EP = EP %>% select(all_of(miss))
+"
+##Seleccionamos variables a nivel de jefe de hogar
+var_jefe<-c('id','Clase','P6090', 'P6240', 'Oficio','P6426', 'P6800', 'P6870',
+            'P6920', 'P7040')
+
+var_personas<-c('id','Clase','P6020', 'P6040', 'P6050', 'P6210', 
+                'P7495','P7505')
+
+EP<-EP %>% select(var_personas)
+
+Of_jefe<-Of_jefe %>% select(var_jefe)
+
+##Creación de nuevas variables (agrupamiento por hogar)
+
+# Porcentaje de mujeres:
+pmujer = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
+
+# Edades:
+edad = EP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
+
+# Educacion:
+# P6210:
+EP$P6210 = ifelse(EP$P6210 == 9, 1, EP$P6210) #Asumimos que las personas que no saben/no responden es porque tienen 0 años de educación.
+edu = EP %>%  group_by(id) %>% summarise(maxedu = max(P6210))
+
+# Numero de personas que reciben arriendos en el hogar:
+EP$P7495 = ifelse(EP$P7495 == 1, 1, 0)
+ajc = EP %>% group_by(id) %>% summarise(pensiones = sum(P7495))
+
+# ingresos no laborales:
+ingnolab = EP %>% group_by(id) %>% summarise(ingsec = max(P7505))
+
 
 #Categorización de variables por su tipo 
 #Se eliminan variables que generan ruido

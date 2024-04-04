@@ -30,12 +30,9 @@ train_H<-train_H %>% select(-id, -Lp)
 train_H <- hotdeck(train_H)
 test_H <- hotdeck(test_H)
 
-
 #Convierto en facotores la categoricas para training
 train_H<- train_H %>% 
   mutate(Pobre=factor(Pobre,levels=c(0,1),labels=c("No","Yes")))
-
-train_H[, 13:ncol(train_H)] <- lapply(train_H[, 13:ncol(train_H)], factor)
 
 train_H[, 13:ncol(train_H)] <- lapply(train_H[, 13:ncol(train_H)], factor)
 
