@@ -56,7 +56,7 @@ for(var in nueve){
 Of_jefetrain = EP %>% filter(P6050 == 1)
 
 #Ahora para test
-Of_jefetest = ET %>% filter(P6050 == 1)
+Of_jefetest = TP %>% filter(P6050 == 1)
 
 #Tabla de estadísticas descriptivas para las variables, únicamente por jefe del hogar
 jefe <- length(colnames(Of_jefetrain))
@@ -101,15 +101,15 @@ for (col in colnames(EP)) {
 var_jefe<-c('id','Clase','P6090', 'P6240', 'Oficio','P6426', 'P6800', 'P6870',
             'P6920', 'P7040')
 
-Of_jefetrain<-Of_jefetrain %>% select(var_jefe)
-Of_jefetest<-Of_jefetest %>% select(var_jefe)
+Of_jefetrain<-Of_jefetrain %>% select(all_of(var_jefe))
+Of_jefetest<-Of_jefetest %>% select(all_of(var_jefe))
 
 ##Seleccionamos variables a nivel de personas (para train y test)
 var_personas<-c('id','Clase','P6020', 'P6040', 'P6050', 'P6210', 
                 'P7495','P7505')
 
-EP<-EP %>% select(var_personas)
-ET<-ET %>% select(var_personas)
+EP<-EP %>% select(all_of(var_personas))
+TP<-TP %>% select(all_of(var_personas))
 
 ##Creación de nuevas variables (agrupamiento por hogar)
 
@@ -144,11 +144,73 @@ ingnolab = EP %>% group_by(id) %>% summarise(ingsec = max(P7505))
 TP$P7505 = ifelse(TP$P7505 == 1, 1, 0)
 ingnolabt = TP %>% group_by(id) %>% summarise(ingsec = max(P7505))
 
-## Creando base de test
-train<-
+# Join de las bases de datos a nivel de hogares:
+# 1. Entrenamiento:
+EH = EH %>% left_join(pmujertrain, by = c('id' = 'id'))
+EH = EH %>% left_join(edad_train, by = c('id' = 'id'))
+EH = EH %>% left_join(edu, by = c('id' = 'id'))
+EH = EH %>% left_join(ajc, by = c('id' = 'id'))
+EH = EH %>% left_join(ingnolab, by = c('id' = 'id'))
+EH = EH %>% left_join(Of_jefetrain, by = c('id' = 'id'))
+EH = EH %>% left_join(VarDep_train, by = c('id' = 'id'))
 
+r <- c('Fex_c', 'Fex_dpto', 'Li', 'Lp')
+EH<- EH %>% select(-all_of(r))
 
+# 2. Testeo:
+TH = TH %>% left_join(pmujertest, by = c('id' = 'id'))
+TH = TH %>% left_join(edad_test, by = c('id' = 'id'))
+TH = TH %>% left_join(edut, by = c('id' = 'id'))
+TH = TH %>% left_join(ajct, by = c('id' = 'id'))
+TH = TH %>% left_join(ingnolabt, by = c('id' = 'id'))
+TH = TH %>% left_join(Of_jefetest, by = c('id' = 'id'))
 
+r <- c('Fex_c', 'Fex_dpto', 'Li')
+TH<- TH %>% select(-all_of(r))
+
+# Metricas de hogares:
+vars <- length(colnames(EH))
+descEH <- data.frame("Variable" = colnames(EH), "Missings" = rep(NA, vars), "Media en Y=1" = rep(NA, vars), "Media en Y=0" = rep(NA, vars),  
+                     "Desviacion Estandard en Y = 1" = rep(NA, vars), "Desviacion Estandard en Y = 0" = rep(NA, vars))
+
+for (col in colnames(EH)) {
+  df <- EH %>% select(col)
+  df1 = EH %>% filter(Pobre == 1) %>% select(col)
+  df0 = EH %>% filter(Pobre == 0) %>% select(col)
+  NAs <- sum(is.na(df))/nrow(EP)
+  mean1 <- mean(as.numeric(unlist(df1)), na.rm = T)
+  mean0 <- mean(as.numeric(unlist(df0)), na.rm = T)
+  sd1 <- sqrt(var(df1, na.rm = T))
+  sd0 <- sqrt(var(df0, na.rm = T))
+  
+  descEH[descEH$Variable == col, 2] <- NAs
+  descEH[descEH$Variable == col, 3] <- mean1
+  descEH[descEH$Variable == col, 4] <- mean0
+  descEH[descEH$Variable == col, 5] <- sd1
+  descEH[descEH$Variable == col, 6] <- sd0
+}
+
+# Base de datos para estadisticas descriptivas:
+write.csv(x = EH, file = "Stores/EstDesc.csv", row.names = FALSE)
+
+# Tratamiento de valores extremos:
+continuas = c('P5000', 'P5010', 'P5130', 'P5140', 'Nper', 'Npersug', 
+              'pmujer', 'nninos', 'nviejos','maxedu')
+
+EHstd = EHstd %>% mutate_at(continuas, ~ (ifelse((.) >= 2.5, 2.5, (.))))
+EHstd = EHstd %>% mutate_at(continuas, ~ (ifelse((.) <= -2.5, -2.5, (.))))
+
+# Analisis de covarianza:
+Corr <- as.data.frame(cor(EH, use = "pairwise.complete.obs"))
+
+descEH$Corr <- as.vector(rep(NA, nrow(descEH)))
+
+for (var in rownames(Corr)) {
+  COR <- Corr %>% select(var)
+  names <- colnames(Corr)[abs(COR) > 0.999]
+  names <- names[!is.na(names)]
+  descEH$Corr[descEH$Variable == var] <- toString.default(names)
+}
 #Categorización de variables por su tipo 
 #Se eliminan variables que generan ruido
 rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto', 'Dominio', 'Depto')
