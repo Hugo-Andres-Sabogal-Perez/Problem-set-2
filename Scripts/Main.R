@@ -53,15 +53,18 @@ for(var in nueve){
 }
 
 #Filtrar la variable Oficio solo para el jefe de hogar, para analizar el % de missings más adelante
-Of_jefe = EP %>% filter(P6050 == 1)
+Of_jefetrain = EP %>% filter(P6050 == 1)
+
+#Ahora para test
+Of_jefetest = ET %>% filter(P6050 == 1)
 
 #Tabla de estadísticas descriptivas para las variables, únicamente por jefe del hogar
-jefe <- length(colnames(Of_jefe))
-descEP_jefe <- data.frame("Variable" = colnames(Of_jefe), "Missings" = rep(NA, jefe), "Media" = rep(NA, jefe), "Desviacion Estandard" = rep(NA, jefe))
+jefe <- length(colnames(Of_jefetrain))
+descEP_jefe <- data.frame("Variable" = colnames(Of_jefetrain), "Missings" = rep(NA, jefe), "Media" = rep(NA, jefe), "Desviacion Estandard" = rep(NA, jefe))
 
-for (col in colnames(Of_jefe)) {
-  df <- Of_jefe %>% select(col)
-  NAs <- sum(is.na(df))/nrow(Of_jefe)
+for (col in colnames(Of_jefetrain)) {
+  df <- Of_jefetrain %>% select(col)
+  NAs <- sum(is.na(df))/nrow(Of_jefetrain)
   mean <- mean(as.numeric(unlist(df)), na.rm = T)
   sd <- sqrt(var(df, na.rm = T))
   
@@ -72,7 +75,10 @@ for (col in colnames(Of_jefe)) {
 #De la nueva base de datos exclusiva para los jefes de hogar, se eliminarán las var con más del 30% de missing values.
 descEP_jefe = descEP_jefe[descEP_jefe$Missings < .3,]
 miss_jef = descEP_jefe$Variable[descEP_jefe$Missings < .3]
-Of_jefe = Of_jefe  %>% select(all_of(miss_jef))
+Of_jefetrain = Of_jefetrain  %>% select(all_of(miss_jef))
+
+#Para test
+Of_jefetest = Of_jefetest  %>% select(all_of(miss_jef))
 
 
 #Tabla de estadísticas descriptivas importantes para elegir buenas variables y comparar con la tabla de jefes de hogar
@@ -90,44 +96,57 @@ for (col in colnames(EP)) {
   descEP[descEP$Variable == col, 4] <- sd
 }
 
-"
-# Agrupar variables de personas:
-descEP = descEP[descEP$Missings < .2,]
-descEP = descEP[!(descEP$Variable %in% Ypersona),]
 
-miss = descEP$Variable[descEP$Missings < .2]
-EP = EP %>% select(all_of(miss))
-"
-##Seleccionamos variables a nivel de jefe de hogar
+##Seleccionamos variables a nivel de jefe de hogar (para train y test)
 var_jefe<-c('id','Clase','P6090', 'P6240', 'Oficio','P6426', 'P6800', 'P6870',
             'P6920', 'P7040')
 
+Of_jefetrain<-Of_jefetrain %>% select(var_jefe)
+Of_jefetest<-Of_jefetest %>% select(var_jefe)
+
+##Seleccionamos variables a nivel de personas (para train y test)
 var_personas<-c('id','Clase','P6020', 'P6040', 'P6050', 'P6210', 
                 'P7495','P7505')
 
 EP<-EP %>% select(var_personas)
-
-Of_jefe<-Of_jefe %>% select(var_jefe)
+ET<-ET %>% select(var_personas)
 
 ##Creación de nuevas variables (agrupamiento por hogar)
 
 # Porcentaje de mujeres:
-pmujer = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
+pmujertrain = EP %>% group_by(id) %>% summarise(pmujertrain = sum(P6020)/length(P6020))
+pmujertest = TP %>% group_by(id) %>% summarise(pmujertest = sum(P6020)/length(P6020))
 
 # Edades:
-edad = EP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
+edad_train = EP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
+edad_test = TP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
 
 # Educacion:
 # P6210:
 EP$P6210 = ifelse(EP$P6210 == 9, 1, EP$P6210) #Asumimos que las personas que no saben/no responden es porque tienen 0 años de educación.
 edu = EP %>%  group_by(id) %>% summarise(maxedu = max(P6210))
 
+TP$P6210 = ifelse(TP$P6210 == 9, 1, TP$P6210) #Asumimos que las personas que no saben/no responden es porque tienen 0 años de educación.
+edut = TP %>%  group_by(id) %>% summarise(maxedu = max(P6210))
+
 # Numero de personas que reciben arriendos en el hogar:
 EP$P7495 = ifelse(EP$P7495 == 1, 1, 0)
 ajc = EP %>% group_by(id) %>% summarise(pensiones = sum(P7495))
 
+TP$P7495 = ifelse(TP$P7495 == 1, 1, 0)
+ajct = TP %>% group_by(id) %>% summarise(pensiones = sum(P7495))
+
+
 # ingresos no laborales:
+EP$P7505 = ifelse(EP$P7505 == 1, 1, 0)
 ingnolab = EP %>% group_by(id) %>% summarise(ingsec = max(P7505))
+
+TP$P7505 = ifelse(TP$P7505 == 1, 1, 0)
+ingnolabt = TP %>% group_by(id) %>% summarise(ingsec = max(P7505))
+
+## Creando base de test
+train<-
+
 
 
 #Categorización de variables por su tipo 
@@ -170,7 +189,5 @@ continuas <- c('P6040', 'P6210s1', 'P6426','P6800', 'P7045', 'P7422s1', 'P7472s1
 
 EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
-# P6210:
-EP$P6210 = ifelse(EP$P6210 == 9, 1, EP$P6210) #Asumimos que las personas que no saben/no responden es porque tienen 0 años de educación.
 
 
