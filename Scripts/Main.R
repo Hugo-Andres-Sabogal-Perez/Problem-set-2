@@ -114,8 +114,8 @@ TP<-TP %>% select(all_of(var_personas))
 ##Creación de nuevas variables (agrupamiento por hogar)
 
 # Porcentaje de mujeres:
-pmujertrain = EP %>% group_by(id) %>% summarise(pmujertrain = sum(P6020)/length(P6020))
-pmujertest = TP %>% group_by(id) %>% summarise(pmujertest = sum(P6020)/length(P6020))
+pmujertrain = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
+pmujertest = TP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
 
 # Edades:
 edad_train = EP %>% group_by(id) %>% summarise(nninos = length(P6040[P6040 <= 18]), nviejos = length(P6040[P6040 >= 70]))
@@ -154,7 +154,7 @@ EH = EH %>% left_join(ingnolab, by = c('id' = 'id'))
 EH = EH %>% left_join(Of_jefetrain, by = c('id' = 'id'))
 EH = EH %>% left_join(VarDep_train, by = c('id' = 'id'))
 
-r <- c('Fex_c', 'Fex_dpto', 'Li', 'Lp')
+r <- c('Fex_c', 'Fex_dpto', 'Li', 'Lp', 'Clase.y')
 EH<- EH %>% select(-all_of(r))
 
 # 2. Testeo:
@@ -165,7 +165,7 @@ TH = TH %>% left_join(ajct, by = c('id' = 'id'))
 TH = TH %>% left_join(ingnolabt, by = c('id' = 'id'))
 TH = TH %>% left_join(Of_jefetest, by = c('id' = 'id'))
 
-r <- c('Fex_c', 'Fex_dpto', 'Li')
+r <- c('Fex_c', 'Fex_dpto', 'Li', 'Clase.y')
 TH<- TH %>% select(-all_of(r))
 
 # Metricas de hogares:
@@ -177,7 +177,7 @@ for (col in colnames(EH)) {
   df <- EH %>% select(col)
   df1 = EH %>% filter(Pobre == 1) %>% select(col)
   df0 = EH %>% filter(Pobre == 0) %>% select(col)
-  NAs <- sum(is.na(df))/nrow(EP)
+  NAs <- sum(is.na(df))/nrow(EH)
   mean1 <- mean(as.numeric(unlist(df1)), na.rm = T)
   mean0 <- mean(as.numeric(unlist(df0)), na.rm = T)
   sd1 <- sqrt(var(df1, na.rm = T))
@@ -190,15 +190,115 @@ for (col in colnames(EH)) {
   descEH[descEH$Variable == col, 6] <- sd0
 }
 
+# Seleccion de variables con menos a 30% de falktantes:
+# Entrenamiento:
+miss = descEH$Variable[descEH$Missings < .3]
+EH = EH %>% select(all_of(miss))
+
+descEH = descEH[descEH$Missings < .3,]
+
+# Testeo:
+TH = TH %>% select(any_of(miss))
+
 # Base de datos para estadisticas descriptivas:
 write.csv(x = EH, file = "Stores/EstDesc.csv", row.names = FALSE)
 
-# Tratamiento de valores extremos:
-continuas = c('P5000', 'P5010', 'P5130', 'P5140', 'Nper', 'Npersug', 
-              'pmujer', 'nninos', 'nviejos','maxedu')
+# Estandarizacion de Lp:
+mediay = mean(EH$Ingpcug, na.rm = T)
+sdy = sqrt(var(EH$Ingpcug, na.rm = T))
+Lpstd = (TH$Lp[1] - mediay)/sdy
+TH$Lp =  as.vector(rep(Lpstd, nrow(TH)))
 
-EHstd = EHstd %>% mutate_at(continuas, ~ (ifelse((.) >= 2.5, 2.5, (.))))
-EHstd = EHstd %>% mutate_at(continuas, ~ (ifelse((.) <= -2.5, -2.5, (.))))
+# Estandarizacion de variables continuas:
+continuas = c('P5000', 'P5010', 'Nper', 'Npersug', 'pmujer', 'nninos', 
+              'nviejos','P6426', 'P6800', 'Ingpcug')
+
+# Entrenamiento:
+EH <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
+
+# Testeo:
+continuas = c('P5000', 'P5010', 'Nper', 'Npersug', 
+              'pmujer', 'nninos', 'nviejos','P6426', 'P6800')
+
+TH <- TH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
+
+# Tratamiento de valores extremos:
+# Entrenamiento:
+EH = EH %>% mutate_at(continuas, ~ (ifelse((.) >= 2.5, 2.5, (.))))
+EH = EH %>% mutate_at(continuas, ~ (ifelse((.) <= -2.5, -2.5, (.))))
+
+# Testeo:
+TH = TH %>% mutate_at(continuas, ~ (ifelse((.) >= 2.5, 2.5, (.))))
+TH = TH %>% mutate_at(continuas, ~ (ifelse((.) <= -2.5, -2.5, (.))))
+
+# Limpieza del environment:
+list = ls()
+list = list[!(list %in% c('EH', 'TH'))]
+rm(list = list)
+
+### Base #1:
+# Eliminamos todas las observaciones que tengan missing values:
+EHugo = na.omit(EH)
+
+THugo = na.omit(TH)
+
+### Base #2: 
+# Utilizamos NA como una categoria adicional:
+# Entrenamiento:
+categoricas <- c('Dominio', 'Clase.x', 'P5090', 'Depto', 'maxedu', 'Oficio', 
+                 'P6240', 'P6870')
+EHMP = get_dummies(
+  EH,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = TRUE
+)
+
+# Testeo:
+THMP = get_dummies(
+  TH,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = TRUE
+)
+
+# Knn para missings:
+EHMPimp <- kNN(EHMP)
+EHMPimp = EHJASimp[, 1:189]
+write.csv(x = EHMPimp, file = "Stores/EstDesc.csv", row.names = FALSE)
+
+### Base #3:
+# No dummyficamos los missing:
+# Entrenamiento:
+categoricas <- c('Dominio', 'Clase.x', 'P5090', 'Depto', 'maxedu', 'Oficio', 
+                 'P6240', 'P6870')
+EHJAS = get_dummies(
+  EH,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = FALSE
+)
+
+# Testeo:
+THJAS = get_dummies(
+  TH,
+  cols = categoricas,
+  prefix = TRUE,
+  prefix_sep = "_",
+  drop_first = FALSE,
+  dummify_na = FALSE
+)
+
+# Llenar los missings:
+EHJASimp <- kNN(EHJAS)
+EHJASimp = EHJASimp[, 1:185]
+write.csv(x = EHJASimp, file = "Stores/EstDesc.csv", row.names = FALSE)
 
 # Analisis de covarianza:
 Corr <- as.data.frame(cor(EH, use = "pairwise.complete.obs"))
@@ -211,45 +311,6 @@ for (var in rownames(Corr)) {
   names <- names[!is.na(names)]
   descEH$Corr[descEH$Variable == var] <- toString.default(names)
 }
-#Categorización de variables por su tipo 
-#Se eliminan variables que generan ruido
-rm = c('Clase', 'Oc', 'Fex_c', 'Fex_dpto', 'Dominio', 'Depto')
-EP <- EP %>% select(-all_of(rm))
-TP <- TP %>% select(-all_of(rm))
-
-#Categóricas
-categoricas <- c('P6100', 'P6240', 'Oficio', 'P6430', 'P6920', 'P7050', 'P7350')
-EP <- get_dummies(
-  EP,
-  cols = categoricas,
-  prefix = TRUE,
-  prefix_sep = "_",
-  drop_first = FALSE,
-  dummify_na = TRUE
-)
-EP <- EP %>% select(-categoricas)
-
-#Binarias
-binarias12 = c('P6020','P6090', 'P6510', 'P6545', 'P6580', 'P6585s1', 
-               'P6585s2', 'P6585s3', 'P6585s4', 'P6590', 'P6600', 'P6610', 
-               'P6620', 'P6630s1', 'P6630s2', 'P6630s3', 'P6630s4', 'P6630s6', 'P7040', 'P7090', 'P7110', 
-               'P7120', 'P7150', 'P7160', 'P7310', 'P7422', 'P7472', 'P7495', 'P7500s2',
-               'P7500s3', 'P7505', 'P7510s1', 'P7510s2', 'P7510s3', 'P7510s5','P7510s6', 'P7510s7')
-binarias <- c('Pet', 'Des', 'Ina', 'Cclasnr2', 'Cclasnr3', 'Cclasnr4', 'Cclasnr5', 'Cclasnr6', 'Cclasnr7', 'Cclasnr8', 
-              'Cclasnr11')
-resta1 <- function(x) {
-  y <- x - 1
-  returnValue(y)
-}
-EP <- EP %>% mutate_at(binarias12, ~ (resta1(.)))
-
-#Continuas
-continuas <- c('P6040', 'P6210s1', 'P6426','P6800', 'P7045', 'P7422s1', 'P7472s1', 'P7500s1a1',
-               'P7500s2a1', 'P7500s3a1', 'P7510s1a1', 'P7510s2a1', 'P7510s3a1', 'P7510s5a1', 'P7510s6a1', 'P7510s7a1', 'Impa', 
-               'Isa', 'Ie', 'Imdi', 'Iof1', 'Iof2', 'Iof3h', 'Iof3i', 'Iof6', 'Impaes', 'Isaes', 'Iees', 'Imdies', 'Iof1es', 
-               'Iof2es', 'Iof3hes', 'Iof3ies', 'Iof6es', 'Ingtotob', 'Ingtotes', 'Ingtot') 
-
-EPstd <- EP %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 
 
