@@ -237,7 +237,7 @@ rm(list = list)
 E_HS <- na.omit(EH)
 write.csv(x = E_HS, file = "Stores/E_HS.csv", row.names = FALSE)
 
-T_HS = na.omit(TH) ### cada obs tiene un missing
+T_HS = kNN(TH) ### cada obs tiene un missing
 write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
 
 
