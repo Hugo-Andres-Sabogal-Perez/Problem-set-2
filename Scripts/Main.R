@@ -240,7 +240,6 @@ write.csv(x = E_HS, file = "Stores/E_HS.csv", row.names = FALSE)
 T_HS = kNN(TH) ### cada obs tiene un missing
 write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
 
-
 ### Base #2: 
 # Utilizamos NA como una categoria adicional:
 # Entrenamiento:
