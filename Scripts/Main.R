@@ -1,6 +1,6 @@
 rm(list = ls())
 # Set directory:
-setwd("")
+setwd("/Users/gabrielaperez/Desktop/repositorios/Problem-Set-1/Problem-set-2")
 
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
@@ -110,7 +110,9 @@ TP<-TP %>% select(all_of(var_personas))
 ##Creación de nuevas variables (agrupamiento por hogar)
 
 # Porcentaje de mujeres:
+EP$P6020 = ifelse(EP$P6020==2,1,0)
 pmujertrain = EP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
+TP$P6020 = ifelse(TP$P6020==2,1,0)
 pmujertest = TP %>% group_by(id) %>% summarise(pmujer = sum(P6020)/length(P6020))
 
 # Edades:
@@ -198,6 +200,48 @@ TH = TH %>% select(any_of(miss))
 
 # Base de datos para estadisticas descriptivas:
 write.csv(x = EH, file = "Stores/EstDesc.csv", row.names = FALSE)
+write.csv(x = TH, file = "Stores/EstDesc_Test.csv", row.names = FALSE)
+
+# Estadísticas Descriptivas
+EH = read.csv("/Users/gabrielaperez/Desktop/repositorios/Problem-Set-1/Problem-set-2/Stores/EstDesc.csv")
+TH = read.csv("/Users/gabrielaperez/Desktop/repositorios/Problem-Set-1/Problem-set-2/Stores/EstDesc_Test.csv")
+
+# Tabla
+# Histograma
+require(ggplot2)
+
+histograma_ingreso <- ggplot(EH, aes(x = Ingpcug)) +
+  geom_histogram(color = "white", fill = "darkgreen") +
+  xlab("Ingreso después de Imputaciones") +
+  ylab("Frecuencia") +
+  theme_bw()
+histograma_ingreso
+
+ggsave("Views/histograma_ing.pdf", width = 6, height = 4, plot = histograma_ingreso)
+
+# Dada la distribución del ingreso se debe utilizar el logaritmo
+EH$ln_ingpcug <- log(EH$Ingpcug)
+
+# Histograma Logaritmo
+histograma_ingreso_log <- ggplot(EH, aes(x = ln_ingpcug)) +
+  geom_histogram(color = "white", fill = "darkgreen") +
+  xlab("Logaritmo del Ingreso después de Imputaciones") +
+  ylab("Frecuencia") +
+  theme_bw()
+histograma_ingreso_log
+
+ggsave("Views/histograma_ing_log.pdf", width = 6, height = 4, plot = histograma_ingreso_log)
+
+# Barras de log ingreso con maxedu
+dispersion_1 <- ggplot(EH, aes(x = maxedu, y = ln_ingpcug)) +
+  geom_point(colour = "darkgreen") +
+  theme_bw() +
+  geom_smooth(method ="lm", color = "firebrick") +
+  xlab("Máximo Año de Educación Alcanzada en el Hogar") +
+  ylab("Logaritmo del Ingreso")
+dispersion_1
+
+ggsave("Views/dispersion_1.pdf", width = 6, height = 4, plot = dispersion_1)
 
 # Estandarizacion de Lp:
 mediay = mean(EH$Ingpcug, na.rm = T)
