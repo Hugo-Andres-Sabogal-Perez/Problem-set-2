@@ -5,17 +5,13 @@ setwd("")
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
 require(tidyverse)
-require(rvest)
-require(stargazer)
 require(rio)
 require(caret)
 require(gridExtra)
 require(skimr)
-require(boot)
 require(tidytable)
 require(VIM)
 require(leaps)
-require(margins)
 
 #Importamos bases de datos
 EH = read.table(unz("Stores/train_hogares.csv.zip", "train_hogares.csv"), header=T, sep=",")
@@ -238,9 +234,12 @@ rm(list = list)
 
 ### Base #1:
 # Eliminamos todas las observaciones que tengan missing values:
-EHugo = na.omit(EH)
+E_HS <- na.omit(EH)
+write.csv(x = E_HS, file = "Stores/E_HS.csv", row.names = FALSE)
 
-THugo = na.omit(TH)
+T_HS = na.omit(TH) ### cada obs tiene un missing
+write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
+
 
 ### Base #2: 
 # Utilizamos NA como una categoria adicional:
