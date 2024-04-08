@@ -19,31 +19,40 @@ require(tidytable)
 require(VIM)
 require(leaps)
 require(margins)
-
+require(glmnet)
 
 ##Impotar bases de datoa limpias
 train_H<-import('Stores/EHstd.csv')
 test_H<-import('Stores/THstd.csv')
 
+train_H<-train_H %>% select(-id, -Lp)
 
 train_H <- hotdeck(train_H)
 test_H <- hotdeck(test_H)
-
 
 #Convierto en facotores la categoricas para training
 train_H<- train_H %>% 
   mutate(Pobre=factor(Pobre,levels=c(0,1),labels=c("No","Yes")))
 
-train_H[, 15:ncol(train_H)] <- lapply(train_H[, 15:ncol(train_H)], factor)
+train_H[, 13:ncol(train_H)] <- lapply(train_H[, 13:ncol(train_H)], factor)
+
+# Luego, asignas las etiquetas "si" y "no" a los niveles de los factores
+for (i in 13:ncol(train_H)) {
+  levels(train_H[[i]]) <- c("no", "si")
+}
+
 
 #Convierto en facotores la categoricas para test
 test_H[, 13:ncol(test_H)] <- lapply(test_H[, 13:ncol(test_H)], factor)
 
-
+# Luego, asignas las etiquetas "si" y "no" a los niveles de los factores
+for (i in 13:ncol(test_H)) {
+  levels(test_H[[i]]) <- c("no", "si")
+}
 
 #Configuracion de cross validation
 ctrl<- trainControl(method = "cv",
-                    number = 10,
+                    number = 5,
                     classProbs = TRUE,
                     savePredictions = T)
 
@@ -59,6 +68,5 @@ modelO1 <- train(Pobre~.,
                   alpha = seq(0,1,by=.2),
                   lambda =10^seq(10, -2, length = 10)
                 )
-                
+                 
 )
-
