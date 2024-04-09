@@ -14,10 +14,10 @@ require(VIM)
 require(leaps)
 
 #Importamos bases de datos
-EH = read.table(unz("Stores/train_hogares.csv.zip", "train_hogares.csv"), header=T, sep=",")
-EP = read.table(unz("Stores/train_personas.csv.zip", "train_personas.csv"), header=T, sep=",")
-TH = read.table(unz("Stores/test_hogares.csv.zip", "test_hogares.csv"), header=T, sep=",")
-TP = read.table(unz("Stores/test_personas.csv.zip", "test_personas.csv"), header=T, sep=",")
+EH = read.table(unz("Stores/train_hogares.zip", "train_hogares.csv"), header=T, sep=",")
+EP = read.table(unz("Stores/train_personas.zip", "train_personas.csv"), header=T, sep=",")
+TH = read.table(unz("Stores/test_hogares.zip", "test_hogares.csv"), header=T, sep=",")
+TP = read.table(unz("Stores/test_personas.zip", "test_personas.csv"), header=T, sep=",")
 
 #Identificación de las variables dependientes que se utilizan para el desarrollo del trabajo
 VarDep_train = EH %>% select(id,Pobre,Ingpcug) 
@@ -241,7 +241,7 @@ E_HS <- EH
 write.csv(x = E_HS, file = "Stores/E_HS.csv", row.names = FALSE)
 
 
-write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
+write.csv(x = TH, file = "Stores/T_HS.csv", row.names = FALSE)
 
 ### Base #2: 
 # Utilizamos NA como una categoria adicional:
