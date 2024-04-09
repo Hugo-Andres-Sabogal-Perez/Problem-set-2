@@ -1,6 +1,6 @@
 rm(list = ls())
 # Set directory:
-setwd("/Users/gabrielaperez/Desktop/repositorios/Problem-Set-1/Problem-set-2")
+setwd("")
 
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
@@ -278,10 +278,10 @@ rm(list = list)
 
 ### Base #1:
 # Eliminamos todas las observaciones que tengan missing values:
-E_HS <- na.omit(EH)
+E_HS <- EH
 write.csv(x = E_HS, file = "Stores/E_HS.csv", row.names = FALSE)
 
-T_HS = kNN(TH) ### cada obs tiene un missing
+
 write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
 
 ### Base #2: 
@@ -289,6 +289,7 @@ write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
 # Entrenamiento:
 categoricas <- c('Dominio', 'Clase.x', 'P5090', 'Depto', 'maxedu', 'Oficio', 
                  'P6240', 'P6870')
+
 EHMP = get_dummies(
   EH,
   cols = categoricas,
@@ -309,7 +310,7 @@ THMP = get_dummies(
 )
 
 # Knn para missings:
-EHMPimp <- kNN(EHMP)
+
 EHMPimp = EHJASimp[, 1:189]
 write.csv(x = EHMPimp, file = "Stores/EstDesc.csv", row.names = FALSE)
 

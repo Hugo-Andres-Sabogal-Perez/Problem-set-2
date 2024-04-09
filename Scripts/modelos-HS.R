@@ -1,7 +1,7 @@
 #### Modelos problem set 2-HS ####
 
 # Set directory:
-setwd(substr(getwd(), 1, nchar(getwd()) - 8))
+setwd('')
 
 # Realizamos inicialmente una limpieza del entorno
 rm(list = ls())
