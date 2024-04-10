@@ -1,6 +1,6 @@
 rm(list = ls())
 # Set directory:
-setwd("")
+setwd("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2")
 
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
@@ -203,13 +203,12 @@ write.csv(x = EH, file = "Stores/EstDesc.csv", row.names = FALSE)
 write.csv(x = TH, file = "Stores/EstDesc_Test.csv", row.names = FALSE)
 
 # Estadísticas Descriptivas
-EH = read.csv("/Users/gabrielaperez/Desktop/repositorios/Problem-Set-1/Problem-set-2/Stores/EstDesc.csv")
-TH = read.csv("/Users/gabrielaperez/Desktop/repositorios/Problem-Set-1/Problem-set-2/Stores/EstDesc_Test.csv")
+EH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc.csv")
+TH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc_Test.csv")
 
 # Tabla
 # Histograma
 require(ggplot2)
-
 histograma_ingreso <- ggplot(EH, aes(x = Ingpcug)) +
   geom_histogram(color = "white", fill = "darkgreen") +
   xlab("Ingreso después de Imputaciones") +
@@ -233,16 +232,59 @@ histograma_ingreso_log
 ggsave("Views/histograma_ing_log.pdf", width = 6, height = 4, plot = histograma_ingreso_log)
 
 # Barras de log ingreso con maxedu
-dispersion_1 <- ggplot(EH, aes(x = maxedu, y = ln_ingpcug)) +
-  geom_point(colour = "darkgreen") +
+#Calculamos las medias para cada categoría de la variable de educación
+EH$ln_ingpcug = ifelse(EH$ln_ingpcug == -Inf, 0,log(EH$Ingpcug)) #Cambiamos las observaciones que que tienen ln(0)
+medias =tapply(EH$ln_ingpcug, EH$maxedu, mean)
+base_educ = data.frame(maxedu= c(1,2,3,4,5,6), medias=medias)
+
+#Realizamos la gráfica
+barras_1 <- ggplot(base_educ, aes(x = maxedu, y = medias))+
+  geom_bar(stat= "identity", fill = "darkgreen") +
   theme_bw() +
-  geom_smooth(method ="lm", color = "firebrick") +
+  geom_smooth(method ="lm", se=F, color = "firebrick") +
   xlab("Máximo Año de Educación Alcanzada en el Hogar") +
   ylab("Logaritmo del Ingreso")
+barras_1
+ggsave("Views/barras_1.pdf", width = 6, height = 4, plot = barras_1)
+
+#Número de personas en el hogar
+dispersion_1 = ggplot(EH, aes(x=Nper, y= ln_ingpcug)) +
+  geom_point(color = "darkgreen") +
+  geom_smooth(method= "lm", color ="firebrick")+
+  xlab("Número de personas en el hogar") +
+  ylab("Logaritmo de los ingresos")
 dispersion_1
+ggsave("Views/dispersion_per.pdf",width = 6, height = 4, plot = dispersion_1)
 
-ggsave("Views/dispersion_1.pdf", width = 6, height = 4, plot = dispersion_1)
+#Tabla de estadísticas descriptivas
+#Renombramos las variables que serán utilizadas para la tabla 
+EH = rename(EH, num_cuartos =P5000)
+EH = rename(EH, num_dormitorios =P5010)
+EH = rename(EH, cot_salud =P6090)
+EH = rename(EH, horas_trabajadas =P6800)
+EH = rename(EH, tamaño_empresa =P6870)
 
+
+tabla = data.frame(EH$num_cuartos, EH$num_dormitorios, EH$nninos, EH$nviejos, EH$cot_salud, EH$horas_trabajadas, EH$Oficio, EH$tamaño_empresa)
+vars <- length(colnames(tabla))
+EstDesc <- data.frame("Variable" = colnames(tabla), "Observaciones" = rep(NA, vars), "Media" = rep(NA, vars), 
+                     "Desviacion_Estandar" = rep(NA, vars), "Min" = rep(NA, vars), "Max"= rep(NA, vars))
+
+
+for (col in colnames(tabla)) {
+  df <- tabla %>% select(col)
+  Obs <- length(df)
+  mean <- mean(as.numeric(unlist(df)), na.rm = T)
+  sd <- sqrt(var(df, na.rm = T))
+  min = min(df)
+  max= max(df)
+  
+  EstDesc[EstDesc$Variable == col, 2] <- Obs
+  EstDesc[EstDesc$Variable == col, 3] <- mean
+  EstDesc[EstDesc$Variable == col, 4] <- sd
+  EstDesc[EstDesc$Variable == col, 5] <- min
+  EstDesc[EstDesc$Variable == col, 6] <- max
+}
 # Estandarizacion de Lp:
 mediay = mean(EH$Ingpcug, na.rm = T)
 sdy = sqrt(var(EH$Ingpcug, na.rm = T))
