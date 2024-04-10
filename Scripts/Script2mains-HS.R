@@ -1,6 +1,6 @@
 rm(list = ls())
 # Set directory:
-setwd(substr(getwd(), 1, nchar(getwd()) - 8))
+setwd("C:/Users/h.sabogal/Documents/Problem-set-2-main/Problem-set-2-main")
 
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
@@ -19,8 +19,13 @@ EP = read.table(unz("Stores/train_personas.zip", "train_personas.csv"), header=T
 TH = read.table(unz("Stores/test_hogares.zip", "test_hogares.csv"), header=T, sep=",")
 TP = read.table(unz("Stores/test_personas.zip", "test_personas.csv"), header=T, sep=",")
 
+
+
 #Identificación de las variables dependientes que se utilizan para el desarrollo del trabajo
 VarDep_train = EH %>% select(id,Pobre,Ingpcug) 
+
+#identificamos linea de pobreza
+LP<-EH$Lp[1]
 
 #Vamos a dejar las mismas variables tanto en la base de entrenamiento como en la base de prueba
 EH = EH %>% select(colnames(TH))
@@ -205,8 +210,7 @@ write.csv(x = TH, file = "Stores/EstDesc_Test.csv", row.names = FALSE)
 # Estandarizacion de Lp:
 mediay = mean(EH$Ingpcug, na.rm = T)
 sdy = sqrt(var(EH$Ingpcug, na.rm = T))
-Lpstd = (TH$Lp[1] - mediay)/sdy
-TH$Lp =  as.vector(rep(Lpstd, nrow(TH)))
+TH$Lp =  (LP-mediay)/(sdy)
 
 # Estandarizacion de variables continuas:
 continuas = c('P5000', 'P5010', 'Nper', 'Npersug', 'pmujer', 'nninos', 
