@@ -272,7 +272,7 @@ EH = rename(EH, horas_trabajadas =P6800)
 EH = rename(EH, tamaño_empresa =P6870)
 
 
-tabla = data.frame(EH$num_cuartos, EH$num_dormitorios, EH$nninos, EH$nviejos, EH$cot_salud, EH$horas_trabajadas, EH$Oficio, EH$tamaño_empresa, EH$pmujer)
+tabla = data.frame(EH$num_cuartos, EH$num_dormitorios, EH$nninos, EH$nviejos, EH$cot_salud, EH$horas_trabajadas, EH$Oficio, EH$tamaño_empresa, EH$pmujer, EH$Nper)
 vars <- length(colnames(tabla))
 EstDesc <- data.frame("Variable" = colnames(tabla), "Observaciones" = rep(NA, vars), "Media" = rep(NA, vars), 
                      "Desviacion_Estandar" = rep(NA, vars), "Min" = rep(NA, vars), "Max"= rep(NA, vars))
