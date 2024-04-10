@@ -202,7 +202,10 @@ TH = TH %>% select(any_of(miss))
 write.csv(x = EH, file = "Stores/EstDesc.csv", row.names = FALSE)
 write.csv(x = TH, file = "Stores/EstDesc_Test.csv", row.names = FALSE)
 
-# Estadísticas Descriptivas
+# Importamos desde aquí para evitar demoras.
+
+#Estadisticas descriptivas:
+
 EH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc.csv")
 TH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc_Test.csv")
 
@@ -285,6 +288,10 @@ for (col in colnames(tabla)) {
   EstDesc[EstDesc$Variable == col, 5] <- min
   EstDesc[EstDesc$Variable == col, 6] <- max
 }
+
+tabla_estadisticas = xtable(EstDesc, type="latex")
+print(tabla_estadisticas , file = "Views/estadisticas.tex")
+
 # Estandarizacion de Lp:
 mediay = mean(EH$Ingpcug, na.rm = T)
 sdy = sqrt(var(EH$Ingpcug, na.rm = T))
