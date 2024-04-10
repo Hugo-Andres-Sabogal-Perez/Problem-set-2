@@ -134,6 +134,9 @@ ajc = EP %>% group_by(id) %>% summarise(pensiones = sum(P7495))
 TP$P7495 = ifelse(TP$P7495 == 1, 1, 0)
 ajct = TP %>% group_by(id) %>% summarise(pensiones = sum(P7495))
 
+#Salud
+EP$P6090 = ifelse(EP$P6090==1, 1, 0)
+TP$P6090 = ifelse(TP$P6090==1, 1, 0)
 
 # ingresos no laborales:
 EP$P7505 = ifelse(EP$P7505 == 1, 1, 0)
@@ -141,6 +144,7 @@ ingnolab = EP %>% group_by(id) %>% summarise(ingsec = max(P7505))
 
 TP$P7505 = ifelse(TP$P7505 == 1, 1, 0)
 ingnolabt = TP %>% group_by(id) %>% summarise(ingsec = max(P7505))
+
 
 # Join de las bases de datos a nivel de hogares:
 # 1. Entrenamiento:
@@ -288,7 +292,7 @@ for (col in colnames(tabla)) {
   EstDesc[EstDesc$Variable == col, 5] <- min
   EstDesc[EstDesc$Variable == col, 6] <- max
 }
-
+require(xtable)
 tabla_estadisticas = xtable(EstDesc, type="latex")
 print(tabla_estadisticas , file = "Views/estadisticas.tex")
 
