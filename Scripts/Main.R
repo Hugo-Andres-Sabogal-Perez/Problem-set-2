@@ -135,8 +135,8 @@ TP$P7495 = ifelse(TP$P7495 == 1, 1, 0)
 ajct = TP %>% group_by(id) %>% summarise(pensiones = sum(P7495))
 
 #Salud
-EP$P6090 = ifelse(EP$P6090==1, 1, 0)
-TP$P6090 = ifelse(TP$P6090==1, 1, 0)
+Of_jefetrain$P6090 = ifelse(Of_jefetrain$P6090== 1, 1, 0)
+Of_jefetest$P6090 = ifelse(Of_jefetest$P6090== 1, 1, 0)
 
 # ingresos no laborales:
 EP$P7505 = ifelse(EP$P7505 == 1, 1, 0)
