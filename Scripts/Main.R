@@ -273,11 +273,11 @@ EstDesc <- data.frame("Variable" = colnames(tabla), "Observaciones" = rep(NA, va
 
 for (col in colnames(tabla)) {
   df <- tabla %>% select(col)
-  Obs <- length(df)
+  Obs <- nrow(df)
   mean <- mean(as.numeric(unlist(df)), na.rm = T)
   sd <- sqrt(var(df, na.rm = T))
-  min = min(df)
-  max= max(df)
+  min = min(as.numeric(unlist(df)), na.rm=T)
+  max= max(as.numeric(unlist(df)), na.rm=T)
   
   EstDesc[EstDesc$Variable == col, 2] <- Obs
   EstDesc[EstDesc$Variable == col, 3] <- mean
@@ -292,15 +292,15 @@ Lpstd = (TH$Lp[1] - mediay)/sdy
 TH$Lp =  as.vector(rep(Lpstd, nrow(TH)))
 
 # Estandarizacion de variables continuas:
-continuas = c('P5000', 'P5010', 'Nper', 'Npersug', 'pmujer', 'nninos', 
-              'nviejos','P6426', 'P6800', 'Ingpcug')
+continuas = c('num_cuartos', 'num_dormitorios', 'Nper', 'Npersug', 'pmujer', 'nninos', 
+              'nviejos','P6426', 'horas_trabajadas', 'Ingpcug')
 
 # Entrenamiento:
 EH <- EH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
 # Testeo:
-continuas = c('P5000', 'P5010', 'Nper', 'Npersug', 
-              'pmujer', 'nninos', 'nviejos','P6426', 'P6800')
+continuas = c('num_cuartos', 'num_dormitorios', 'Nper', 'Npersug', 
+              'pmujer', 'nninos', 'nviejos','P6426', 'horas_trabajadas')
 
 TH <- TH %>% mutate_at(continuas, ~ (scale(.) %>% as.vector()))
 
@@ -330,7 +330,7 @@ write.csv(x = TH, file = "Stores/test.csv", row.names = FALSE)
 # Utilizamos NA como una categoria adicional:
 # Entrenamiento:
 categoricas <- c('Dominio', 'Clase.x', 'P5090', 'Depto', 'maxedu', 'Oficio', 
-                 'P6240', 'P6870')
+                 'P6240', 'tamaño_empresa')
 
 EHMP = get_dummies(
   EH,
@@ -360,7 +360,7 @@ write.csv(x = EHMPimp, file = "Stores/EstDesc.csv", row.names = FALSE)
 # No dummyficamos los missing:
 # Entrenamiento:
 categoricas <- c('Dominio', 'Clase.x', 'P5090', 'Depto', 'maxedu', 'Oficio', 
-                 'P6240', 'P6870')
+                 'P6240', 'tamaño_empresa')
 EHJAS = get_dummies(
   EH,
   cols = categoricas,
