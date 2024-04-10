@@ -209,8 +209,8 @@ write.csv(x = TH, file = "Stores/EstDesc_Test.csv", row.names = FALSE)
 EH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc.csv")
 TH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc_Test.csv")
 
-# Tabla
-# Histograma
+
+# Histograma Ingresos
 require(ggplot2)
 histograma_ingreso <- ggplot(EH, aes(x = Ingpcug)) +
   geom_histogram(color = "white", fill = "darkgreen") +
@@ -224,7 +224,7 @@ ggsave("Views/histograma_ing.pdf", width = 6, height = 4, plot = histograma_ingr
 # Dada la distribución del ingreso se debe utilizar el logaritmo
 EH$ln_ingpcug <- log(EH$Ingpcug)
 
-# Histograma Logaritmo
+# Histograma Logaritmo de Ingreso
 histograma_ingreso_log <- ggplot(EH, aes(x = ln_ingpcug)) +
   geom_histogram(color = "white", fill = "darkgreen") +
   xlab("Logaritmo del Ingreso después de Imputaciones") +
@@ -268,7 +268,7 @@ EH = rename(EH, horas_trabajadas =P6800)
 EH = rename(EH, tamaño_empresa =P6870)
 
 
-tabla = data.frame(EH$num_cuartos, EH$num_dormitorios, EH$nninos, EH$nviejos, EH$cot_salud, EH$horas_trabajadas, EH$Oficio, EH$tamaño_empresa)
+tabla = data.frame(EH$num_cuartos, EH$num_dormitorios, EH$nninos, EH$nviejos, EH$cot_salud, EH$horas_trabajadas, EH$Oficio, EH$tamaño_empresa, EH$pmujer)
 vars <- length(colnames(tabla))
 EstDesc <- data.frame("Variable" = colnames(tabla), "Observaciones" = rep(NA, vars), "Media" = rep(NA, vars), 
                      "Desviacion_Estandar" = rep(NA, vars), "Min" = rep(NA, vars), "Max"= rep(NA, vars))
