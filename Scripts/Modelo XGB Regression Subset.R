@@ -16,6 +16,7 @@ require(MLmetrics)
 
 EH = read.csv("", header = T, sep = ",")
 TH = read.csv("", header = T, sep = ",")
+TH = TH %>% rename("Dominio_RESTO_URBANO" = "Dominio_RESTO.URBANO", "Dominio_SANTA_MARTA" = "Dominio_SANTA.MARTA")
 
 set.seed(1001)
 ctrl<- trainControl(method = "cv",
@@ -23,12 +24,12 @@ ctrl<- trainControl(method = "cv",
                     classProbs = TRUE,
                     savePredictions = T)
 
-grid <- expand.grid(nrounds = c(1000, 1500),
+grid <- expand.grid(nrounds = c(1500, 3000, 5000),
                     max_depth = 6,
-                    eta = c(.01, .001),
-                    gamma = c(.5, .2),
-                    colsample_bytree = .5,
-                    min_child_weight = c(10, 5),
+                    eta = .01,
+                    gamma = .5,
+                    colsample_bytree = c(.2, .4, .6, .8),
+                    min_child_weight = 10,
                     subsample = .8)
 
 XGBreg <- train(Ingpcug~., 
@@ -41,7 +42,7 @@ XGBreg <- train(Ingpcug~.,
 XGBreg 
 
 # Extraer Predicciones
-predXGBshort <- THJAS  %>% 
+predXGBshort <- TH  %>% 
   mutate(Ingpcug = predict(XGBreg, newdata = TH, type = "raw"))  %>% select(id,Ingpcug, Lpstd)
 
 
