@@ -39,3 +39,13 @@ XGBreg <- train(Ingpcug~.,
              metric="MSE")
 
 XGBreg 
+
+# Extraer Predicciones
+predXGBshort <- THJAS  %>% 
+  mutate(Ingpcug = predict(XGBreg, newdata = TH, type = "raw"))  %>% select(id,Ingpcug, Lpstd)
+
+
+#ajustamos la prediccion
+predXGBshort<- predXGBshort %>% mutate(pobre=ifelse(Ingpguc > Lpstd,0,1)) %>% select(id, pobre)
+
+write.csv(predXGBshort, "regression_XGB.csv", row.names = F)
