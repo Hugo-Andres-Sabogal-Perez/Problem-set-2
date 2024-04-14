@@ -1,4 +1,4 @@
-setwd("C:/Users/j.silval/Downloads")
+setwd('/Users/juansilva/Documents/GitHub/Problem-set-2')
 
 require(pacman)
 require(tidyverse)
@@ -12,10 +12,15 @@ require(leaps)
 require(usethis)
 require(devtools)
 require(MLmetrics)
+require(h2o)
+require(mboost)
 
-
-EH = read.csv("E_HS.csv", header = T, sep = ",")
-TH = read.csv("T_HS_KNNIMP.csv", header = T, sep = ",")
+EH = read.csv("Stores/E_HS.csv", header = T, sep = ",")
+TH = read.csv("Stores/T_HS_KNNIMP.csv", header = T, sep = ",", )
+LP = read.table(unz("Stores/test_hogares.csv.zip", "test_hogares.csv"), header=T, sep=",")
+LP = LP %>% select(id, Lp)
+I = read.table(unz("Stores/train_hogares.csv.zip", "train_hogares.csv"), header=T, sep=",")
+I = I %>% select(Ingpcug)
 
 # Se omiten los valores faltantes de EH
 EH = na.omit(EH)
@@ -31,7 +36,7 @@ EHJAS = get_dummies(
   EH,
   cols = categoricas,
   prefix = TRUE,
-  prefix_sep = "",
+  prefix_sep = "_",
   drop_first = FALSE,
   dummify_na = TRUE
 )
@@ -43,7 +48,7 @@ THJAS = get_dummies(
   TH,
   cols = categoricas,
   prefix = TRUE,
-  prefix_sep = "",
+  prefix_sep = "_",
   drop_first = FALSE,
   dummify_na = TRUE
 )
@@ -72,8 +77,8 @@ for (var in rownames(Corr)) {
   varcovEH$Cov[varcovEH$Variable == var] <- toString.default(names)
 }
 
-EHJAS = EHJAS %>% select(-c("Clase.x1", "Clase.x2"))
-THJAS = THJAS %>% select(-c("Clase.x1", "Clase.x2"))
+EHJAS = EHJAS %>% select(-c("Clase.x_1", "Clase.x_2"))
+THJAS = THJAS %>% select(-c("Clase.x_1", "Clase.x_2"))
 
 #
 EHPobre = EHJAS %>% left_join(Y[,1:2], by= c("id" = "id"))
@@ -97,7 +102,6 @@ EHPobre = EHPobre %>% mutate_at(fact, ~ as.factor(.))
 #
 fact = fact[!(fact %in% c("Pobre"))]
 THJAS = THJAS %>% mutate_at(fact, ~ as.factor(.))
-fact <- gsub(" ", "",fact)
 EHIng = EHIng %>% mutate_at(fact, ~ as.factor(.))
 
 ### Modelos de clasificacion:
@@ -144,25 +148,64 @@ write.csv(predict1, "classification_CART.csv", row.names = F)
 # 2. CART Optimizado:
 
 # 3. XGBost:
-grid <- expand.grid(nrounds = c(1, 5, 10),
-                    max_depth = c(1, 5, 10), 
-                    subsample = c(.8, 1)) 
+set.seed(1001)
+grid <- expand.grid(nrounds = c(100, 500, 1000),
+                    max_depth = c(4, 6, 8),
+                    eta = c(.3, .1, .01),
+                    gamma = c(0, .5),
+                    colsample_bytree = .5,
+                    min_child_weight = c(10, 30, 50),
+                    subsample = .6) 
 
-XGB <- train(Pobre~., 
+XGB <- train(Ing~., 
                  data = EHPobre, 
                  method = "xgbTree",
                  trControl = ctrl,
                  tuneGrid = grid,
                  metric="F")
 
-XGB
+XGB 
+
+# Extraer Predicciones
+predXGB <- THJAS  %>% 
+  mutate(pobre = predict(XGB, newdata = THJAS, type = "raw"))  %>% select(id,pobre)
+
+head(predXGB)
+
+#ajustamos la prediccion
+predXGB<- predXGB %>% 
+  mutate(pobre=ifelse(pobre=="POBRE",1,0))
+
+head(predXGB)
+
+write.csv(predXGB, "classification_XGB.csv", row.names = F)
+
+# Importancia de las variables como criterio de selerccion:
+Ivar = varImp(XGB, scale = F)
+IMP = data.frame('Variables' = as.character(row.names(Ivar[['importance']])), 'Importancia' = Ivar[['importance']][['Overall']])
+IMP = IMP %>% filter(Importancia > .00099) %>% select('Variables')
+
+#
+imp <- gsub("1$", "",IMP$Variables)
+THXGB = THJAS %>% select(any_of(imp), c('Dominio_RESTO_URBANO', 'P7040', 'id'))
+EHXGB = EHIng %>% select(any_of(imp), c('Dominio_RESTO_URBANO', 'P7040', 'Ingpcug'))
+
+write.csv(EHXGB, "Entrenamiento_subset.csv", row.names = F)
+write.csv(THXGB, "Testeo_subset.csv", row.names = F)
+
 
 ### Modelos de regresion:
+# Creacion de LP estandarizado:
+mediay = mean(I$Ingpcug, na.rm = T)
+sdy = sqrt(var(I$Ingpcug, na.rm = T))
+THJAS = THJAS %>% left_join(LP, by = c('id' = 'id'))
+THJAS$Lpstd = (THJAS$Lp - mediay)/sdy
+
 # Formula general para la selección de variables:
 varspoly <- c('P5000', 'P5010', 'Nper', 'Npersug', 'pmujer', 'nninos', 'nviejos','P6426', 'P6800')
 varcat = colnames(EHIng)[13:170]
 varcat <- append(fact, c("P6090", "P7040"))
-varcat <- gsub(" ", "", varcat)
+varcat <- gsub(" ", "_", varcat)
 # Construct the categorical part of the formula
 cat_formula <- paste(varcat, collapse = " + ")
 
@@ -175,10 +218,10 @@ formula <- paste("Ingpcug ~", cat_formula, "+", poly_formula)
 # Convert the formula string to a formula object
 maxmodel <- as.formula(formula)
 
-# Rename:
-EHIng = EHIng %>% rename("DominioRESTOURBANO" = "DominioRESTO URBANO", "DominioSANTAMARTA" = "DominioSANTA MARTA")
+EHIng = EHIng %>% rename("Dominio_RESTO_URBANO" = "Dominio_RESTO URBANO", "Dominio_SANTA_MARTA" = "Dominio_SANTA MARTA")
+THJAS = THJAS %>% rename("Dominio_RESTO_URBANO" = "Dominio_RESTO URBANO", "Dominio_SANTA_MARTA" = "Dominio_SANTA MARTA")
 
-# Modelo Forward Selection:
+# 1. Forward selection:
 set.seed(1001)
 folds <- sample(rep(1:10, length = nrow(EHIng)))
 crossval <- matrix(NA, 10, 50, dimnames = list(NULL, paste(1:50)))
@@ -207,15 +250,27 @@ forward_model <- regsubsets(maxmodel,
 forward_model_names <- names(coef(forward_model, id = nvars))
 
 # Se plentea la forma funcional de forward selection:
-formfor <- as.formula()
+formfor <- as.formula('Ingpcug ~ Dominio_FLORENCIA + Dominio_MEDELLIN +Dominio_RESTO_URBANO+Dominio_RIOHACHA+
+                      Dominio_RURAL+Dominio_VALLEDUPAR+P5090_1+P5090_2+Depto_20+Depto_41+maxedu_3+maxedu_5+
+                      Oficio_3+Oficio_4+Oficio_5+Oficio_7+Oficio_8+Oficio_9+Oficio_11+Oficio_12+Oficio_13+Oficio_14+
+                      Oficio_15+Oficio_16+Oficio_18+Oficio_30+Oficio_31+Oficio_32+Oficio_33+Oficio_34+Oficio_44+
+                      Oficio_50+Oficio_54+P6870_5+P6870_6+poly(P5000, 2, raw = TRUE)+P5010+Nper^2+Npersug+
+                      pmujer+poly(nninos, 2, raw = TRUE)+poly(nviejos, 2, raw = TRUE)+poly(P6426, 2, raw = TRUE)+
+                      poly(P6800, 2, raw = TRUE)+maxedu_6')
 
 # Se calcula el RMSE fuera de muestra:
-modelo5 <- lm(formfor, data = training)
-predictions <- predict(modelo5, testing)
-score5a <- RMSE(predictions, testing$lnw)
+modelo_forward_final <- lm(formfor, data = EHIng)
 
+# Extraer Predicciones
+predfor <- THJAS  %>% 
+  mutate(Ingpguc = predict(modelo_forward_final, newdata = THJAS))  %>% select(id,Ingpguc,Lpstd)
 
-# Modelo Backward Selection:
+# Incluimos la linea de pobreza:
+predfor = predfor %>% mutate(pobre =ifelse(Ingpguc > Lpstd,0,1)) %>% select(id, pobre)
+
+write.csv(predfor, "regression_forward.csv", row.names = F)
+
+# 2. Backward selection:
 for (j in 1:10) {
   fit <- regsubsets(maxmodel, data = EHIng[folds != j, ], nvmax = 84, method = "backward")
   test <- model.matrix(maxmodel, data = EHIng[folds == j, ])
@@ -240,42 +295,88 @@ backward_model <- regsubsets(maxmodel,
 
 backward_model_names <- names(coef(backward_model, id = nvars))
 
-# Se extrae el RMSE del modelo de 35 variables:
-score6 <- errbackward[nvars]
+# Se plentea la forma funcional de forward selection:
+formback <- as.formula('Ingpcug ~ Dominio_FLORENCIA +Dominio_ARMENIA+Dominio_CARTAGENA+Dominio_CUCUTA+
+                      Dominio_IBAGUE+Dominio_MONTERIA+Dominio_NEIVA+Dominio_PASTO+Dominio_POPAYAN+
+                      Dominio_QUIBDO+Dominio_RESTO_URBANO+Dominio_RIOHACHA+Dominio_RURAL+Dominio_SANTA_MARTA+
+                      Dominio_SINCELEJO+Dominio_VALLEDUPAR+P5090_1+P5090_2+maxedu_3+maxedu_5+Oficio_1+Oficio_2+
+                      Oficio_5+Oficio_8+Oficio_9+Oficio_12+Oficio_13+Oficio_14+Oficio_15+Oficio_16+Oficio_30+
+                      Oficio_31+Oficio_32+Oficio_33+Oficio_44+Oficio_50+Oficio_51+Oficio_61+P5000^2+P5010+Nper^2+
+                      Npersug+pmujer+nninos+poly(nviejos, 2, raw = TRUE)+P6426+
+                      poly(P6800, 2, raw = TRUE)+maxedu_6')
 
-# Se plantea la forma funcional del modelo:
-formback <- as.formula()
+# Se estima el modelo con toda la info:
+modelo_backward_final <- lm(formback, data = EHIng)
 
-# Se calcula el RMSE fuera de muestra:
-modelo6 <- lm(formback, data = training)
-predictions <- predict(modelo6, testing)
-score6a <- RMSE(predictions, testing$lnw)
+# Extraer Predicciones
+predback <- THJAS  %>% 
+  mutate(Ingpguc = predict(modelo_forward_final, newdata = THJAS))  %>% select(id,Ingpguc,Lpstd)
 
-# 1. Forward selection:
+# Incluimos la linea de pobreza:
+predback = predback %>% mutate(pobre=ifelse(Ingpguc > Lpstd,0,1)) %>% select(id, pobre)
 
-# 2. Backward selection:
+write.csv(predback, "regression_backward.csv", row.names = F)
 
 # 3. Elastic net optimizado:
+THXGB = read.csv("Testeo_subset.csv", header = T, sep = ',')
+EHXGB = read.csv("Entrenamiento_subset.csv", header = T, sep = ',')
+
+#
+THXGB = THXGB %>% left_join(THJAS[,c('id', 'Lpstd')], by = c('id' = 'id'))
+set.seed(1001)
 ctrl<- trainControl(method = "cv",
                     number = 5,
                     classProbs = T,
-                    summaryFunction = defaultSummary,
+                    summaryFunction = prSummary,
                     savePredictions = T)
-grid = expand.grid(
-  alpha = seq(0,1,by=.01),
-  lambda =10^seq(-2, 2, by = .2))
-  
+
+
 modelOnet <- train(Ingpcug~.,
-                 data=EHIng,
-                 metric = "MSE",
-                 method = "glmnet",
-                 trControl = ctrl,
-                 tuneGrid= grid)
+                   data=EHIng,
+                   metric = "RMSE",
+                   method = "glmnet",
+                   trControl = ctrl,
+                   tuneGrid= grid)
 
 modelOnet
 
+# Extraer Predicciones
+prednetL <- THJAS  %>% 
+  mutate(Ingpcug = predict(modelOnet, newdata = THJAS, type = "raw"))  %>% select(id,Ingpcug, Lpstd)
 
-predictnet <- THJAS   %>% 
-  mutate(ing_pred = predict(modelOnet, newdata = test, type = "raw")    ## predicted class labels
-  )  %>% select(id,pobre_lab)
+
+#ajustamos la prediccion
+prednetL<- prednetL %>% mutate(pobre=ifelse(Ingpguc > Lpstd,0,1)) %>% select(id, pobre)
+
+write.csv(prednetL, "regression_ENlarge.csv", row.names = F)
+
+#### GBMaschine:
+# Limpieza del environment:
+list = ls()
+list = list[!(list %in% c('THXGB', 'EHXGB'))]
+rm(list = list)
+
+set.seed(1001)
+
+grid = expand.grid(mstop = c(7000, 10000, 12000),
+                   prune = c('no', 'yes'))
+
+glmboost <- train(Ingpcug~.,
+                   data= EHXGB,
+                   metric = "RMSE",
+                   method = "glmboost",
+                   trControl = ctrl,
+                   tuneGrid= grid)
+
+glmboost
+
+# Extraer Predicciones
+prednetS <- THXGB  %>% 
+  mutate(Ingpcug = predict(glmboost, newdata = THXGB, type = "raw"))  %>% select(id,Ingpcug, Lpstd)
+
+
+#ajustamos la prediccion
+prednetS<- prednetS %>% mutate(pobre=ifelse(Ingpcug > Lpstd,0,1)) %>% select(id, pobre)
+
+write.csv(prednetS, "regression_glmboost12k.csv", row.names = F)
 
