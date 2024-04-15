@@ -1,4 +1,4 @@
-setwd('')
+setwd(substr(getwd(), 1, nchar(getwd()) - 8))
 
 require(pacman)
 require(tidyverse)
