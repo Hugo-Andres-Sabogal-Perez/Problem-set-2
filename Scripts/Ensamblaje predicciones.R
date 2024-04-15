@@ -58,6 +58,8 @@ mayoria3 = PRE  %>%
 unanimidad3 = PRE  %>% 
   mutate(pobre = ifelse(preds_3 == 3, 1, 0 )) %>% select(id, pobre)
 
+quantile(PRE$preds_peso, probs = seq(0, 1, 0.01))
+
 pesos = PRE  %>% 
   mutate(pobre = ifelse(preds_peso >= .5, 1, 0 )) %>% select(id, pobre)
 
@@ -66,5 +68,6 @@ write.csv(granmayoria11, "classification_ensamble_mayor8_11.csv", row.names = F)
 write.csv(mayoria3, "classification_ensamble_mayoria_simple_3.csv", row.names = F)
 write.csv(unanimidad3, "classification_ensamble_unanimidad_3.csv", row.names = F)
 write.csv(pesos, "classification_ensamble_weighted.csv", row.names = F)
+
 
 
