@@ -1,6 +1,6 @@
 rm(list = ls())
 # Set directory:
-setwd("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2")
+setwd(substr(getwd(), 1, nchar(getwd()) - 8))
 
 # Llamamos las librerías necesarias para la realización del trabajo
 require(pacman)
@@ -210,8 +210,8 @@ write.csv(x = TH, file = "Stores/EstDesc_Test.csv", row.names = FALSE)
 
 #Estadisticas descriptivas:
 
-EH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc.csv")
-TH = read.csv("/Users/mapaosuna/Desktop/Octavo Semestre/Big Data/Talleres/Taller 2/Problem-set-2/Stores/EstDesc_Test.csv")
+EH = read.csv("Stores/EstDesc.csv")
+TH = read.csv("Stores/EstDesc_Test.csv")
 
 
 # Histograma Ingresos
@@ -220,7 +220,8 @@ histograma_ingreso <- ggplot(EH, aes(x = Ingpcug)) +
   geom_histogram(color = "white", fill = "darkgreen") +
   xlab("Ingreso después de Imputaciones") +
   ylab("Frecuencia") +
-  theme_bw()
+  theme_bw() +
+  
 histograma_ingreso
 
 ggsave("Views/histograma_ing.pdf", width = 6, height = 4, plot = histograma_ingreso)
@@ -229,11 +230,15 @@ ggsave("Views/histograma_ing.pdf", width = 6, height = 4, plot = histograma_ingr
 EH$ln_ingpcug <- log(EH$Ingpcug)
 
 # Histograma Logaritmo de Ingreso
+# Crear el gráfico
 histograma_ingreso_log <- ggplot(EH, aes(x = ln_ingpcug)) +
   geom_histogram(color = "white", fill = "darkgreen") +
   xlab("Logaritmo del Ingreso después de Imputaciones") +
   ylab("Frecuencia") +
-  theme_bw()
+  theme_bw() +
+  labs(linetype = "Descripción de la Línea")
+
+# Mostrar el gráfico
 histograma_ingreso_log
 
 ggsave("Views/histograma_ing_log.pdf", width = 6, height = 4, plot = histograma_ingreso_log)
@@ -244,12 +249,19 @@ EH$ln_ingpcug = ifelse(EH$ln_ingpcug == -Inf, 0,log(EH$Ingpcug)) #Cambiamos las 
 medias =tapply(EH$ln_ingpcug, EH$maxedu, mean)
 base_educ = data.frame(maxedu= c(1,2,3,4,5,6), medias=medias)
 
+base_educ$maxedu<-factor(base_educ$maxedu)
+
+base_educ <- base_educ %>%
+  mutate(maxedu_str = recode(maxedu, "1" = "Ninguno", "2" = "Preescolar", "3" = "Primaria",
+                                                 '4'='Secundaria', '5'='Media', '6'='Superior'))
+
+
 #Realizamos la gráfica
-barras_1 <- ggplot(base_educ, aes(x = maxedu, y = medias))+
+barras_1 <- ggplot(base_educ, aes(x = maxedu_str, y = medias))+
   geom_bar(stat= "identity", fill = "darkgreen") +
   theme_bw() +
   geom_smooth(method ="lm", se=F, color = "firebrick") +
-  xlab("Máximo Año de Educación Alcanzada en el Hogar") +
+  xlab("Máximo Nivel de Educación Alcanzada en el Hogar") +
   ylab("Logaritmo del Ingreso")
 barras_1
 ggsave("Views/barras_1.pdf", width = 6, height = 4, plot = barras_1)
@@ -259,7 +271,9 @@ dispersion_1 = ggplot(EH, aes(x=Nper, y= ln_ingpcug)) +
   geom_point(color = "darkgreen") +
   geom_smooth(method= "lm", color ="firebrick")+
   xlab("Número de personas en el hogar") +
-  ylab("Logaritmo de los ingresos")
+  ylab("Logaritmo de los ingresos") +
+  theme_bw()
+
 dispersion_1
 ggsave("Views/dispersion_per.pdf",width = 6, height = 4, plot = dispersion_1)
 
